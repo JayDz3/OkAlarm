@@ -2,6 +2,7 @@
 <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_height="wrap_content"
     android:layout_width="match_parent"
+    android:layout_margin="@dimen/sixteenDp"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <TextView
@@ -31,9 +32,19 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toTopOf="parent"
-        android:layout_marginStart="@dimen/twoDp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toEndOf="@id/alarm_item_colon"
+        android:layout_marginStart="@dimen/twoDp"
+        android:textSize="@dimen/eighteenSP"/>
+
+    <TextView
+        android:id="@+id/alarm_am_pm"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@id/alarm_item_minute"
+        android:layout_marginStart="@dimen/eightDp"
         android:textSize="@dimen/eighteenSP"/>
 
     <Button

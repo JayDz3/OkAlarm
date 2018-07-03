@@ -17,11 +17,8 @@ import java.util.Calendar;
 
 public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSetListener {
 
-  private static final String ALARM_IS_SET = "alarm.is.set";
-  private static final String ALARM_CURRENT_TIME = "alarm.current.time";
-
-  private Button submitButton;
-  private Button cancelButton;
+  Button submitButton;
+  Button cancelButton;
   private TimePicker timePicker;
   private int hourOfDay;
   private int minute;
@@ -37,7 +34,7 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
   }
 
   @Override
-  public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+  public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
     super.onCreateView(inflater, container, savedInstanceState);
     return inflater.inflate(R.layout.fragment_alarm, container, false);
   }
@@ -95,8 +92,8 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
     mListener = null;
   }
 
-  public interface OnAlarmSet{
-    void onSet(int hour, int minute, String am_pm);
+  public interface OnAlarmSet {
+    void onSet(int hourOfDay, int minute, String am_pm);
     void onCancel();
   }
 

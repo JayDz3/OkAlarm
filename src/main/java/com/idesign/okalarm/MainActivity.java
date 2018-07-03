@@ -11,8 +11,8 @@ import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
-import android.widget.ToggleButton;
 
 import com.idesign.okalarm.Interfaces.AlarmItemListener;
 
@@ -23,15 +23,14 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity implements AlarmFragment.OnAlarmSet, AlarmItemListener {
 
   AlarmFragment newFragment;
-  ToggleButton toggleButton;
   FloatingActionButton fab;
 
   private RecyclerView recyclerView;
   private FormattedTimesAdapter adapter;
 
   private AlarmManager alarmManager;
-  private Intent intent;
-  private PendingIntent pendingIntent;
+  Intent intent;
+  PendingIntent pendingIntent;
 
   private List<Long> times;
   private List<FormattedTime> formattedTimes;
@@ -40,7 +39,6 @@ public class MainActivity extends AppCompatActivity implements AlarmFragment.OnA
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
-    toggleButton = findViewById(R.id.main_toggle);
     fab = findViewById(R.id.main_fab);
 
     times = new ArrayList<>();
@@ -53,7 +51,6 @@ public class MainActivity extends AppCompatActivity implements AlarmFragment.OnA
     recyclerView.addItemDecoration(itemDecoration);
     recyclerView.setAdapter(adapter);
 
-    toggleButton.setOnClickListener(l -> onToggle());
     fab.setOnClickListener(l -> attachAlarmFragment());
     alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
   }
@@ -62,10 +59,16 @@ public class MainActivity extends AppCompatActivity implements AlarmFragment.OnA
     if (newFragment != null && !isAttached()) {
       return;
     }
-    showToast("attaching");
     newFragment = AlarmFragment.newInstance();
     getSupportFragmentManager().beginTransaction()
     .replace(R.id.main_frame_layout, newFragment).commit();
+    recyclerView.setVisibility(View.GONE);
+  }
+
+  public void removeAlarmFragment() {
+    getSupportFragmentManager().beginTransaction()
+    .detach(newFragment).commit();
+    recyclerView.setVisibility(View.VISIBLE);
   }
 
   public boolean isAttached() {
@@ -83,57 +86,102 @@ public class MainActivity extends AppCompatActivity implements AlarmFragment.OnA
       times.add(calendar.getTimeInMillis());
       int hour = calendar.get(Calendar.HOUR);
       int min = calendar.get(Calendar.MINUTE);
-      addNewItem(hour, min);
-      intent = new Intent(MainActivity.this, AlarmReceiver.class);
-      pendingIntent = PendingIntent.getBroadcast(this, 100, intent, 0);
+      FormattedTime formattedTime = new FormattedTime(calendar.getTimeInMillis(), hour, min, am_pm, true);
+      addNewItem(formattedTime);
+      setIntents(formattedTime);
       if (alarmManager != null) {
-        alarmManager.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
+        setAlarm(calendar.getTimeInMillis(), pendingIntent);
       }
     }
+    removeAlarmFragment();
   }
 
-  public void addNewItem(int hour, int min) {
-    FormattedTime formattedTime = new FormattedTime(hour, min, true);
+  public void setAlarm(long milliseconds, PendingIntent pendingIntent) {
+    alarmManager.set(AlarmManager.RTC_WAKEUP, milliseconds, pendingIntent);
+
+  }
+
+  /*==================================*
+   * AlarmListener from AlarmFragment *
+   *==================================*/
+  public void addNewItem(FormattedTime formattedTime) {
     formattedTimes.add(formattedTime);
-    adapter.notifyItemInserted(formattedTimes.size());
-  }
-
-  public void logMessage(String message) {
-    Log.d("Main", message);
+    formattedTimes.sort((a, b) -> {
+      if (a.get_rawTime() < b.get_rawTime()) {
+        return -1;
+      }
+      if (a.get_rawTime() > b.get_rawTime()) {
+        return 1;
+      }
+      if (a.get_rawTime() == b.get_rawTime()) {
+        return 0;
+      }
+      return 0;
+    });
+    adapter.notifyDataSetChanged();
   }
 
   public void onCancel() {
+    silenceAlarm();
+    removeAlarmFragment();
+  }
+
+  /*=======================*
+   *  Set new Alarm intent *
+   *=======================*/
+  public void setIntents(FormattedTime formattedTime) {
+    intent = new Intent(MainActivity.this, AlarmReceiver.class);
+    pendingIntent = PendingIntent.getBroadcast(this, ((int)formattedTime.get_rawTime()), intent, 0);
+  }
+
+
+  public void silenceAlarm() {
     if (AlarmReceiver.getRingtone() != null) {
       AlarmReceiver.getRingtone().stop();
     }
-    intent = new Intent(MainActivity.this, AlarmReceiver.class);
-    pendingIntent = PendingIntent.getBroadcast(this, 100, intent, 0);
+  }
+
+  /*================================================*
+   *  From ItemAdapter single item action interface *
+   *================================================*/
+  public void onDelete(final int position) {
+    silenceAlarm();
+    FormattedTime formattedTime = formattedTimes.get(position);
+    long rawTime = formattedTime.get_rawTime();
+    int idx = times.indexOf(rawTime);
+    setIntents(formattedTime);
     if (alarmManager != null) {
       alarmManager.cancel(pendingIntent);
     }
-  }
-
-  public void onToggle() {
-    Intent intent = new Intent(MainActivity.this, AlarmReceiver.class);
-    PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 100, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-    logMessage(pendingIntent.toString());
-    pendingIntent.cancel();
-  }
-
-  public void onDelete(final int position) {
-
+    if (idx > -1) {
+      times.remove(rawTime);
+    }
   }
 
   public void onToggle(boolean isToggled, int position) {
     if (!isToggled) {
-      logMessage("not toggled: " + isToggled);
+      silenceAlarm();
+      FormattedTime formattedTime = formattedTimes.get(position);
+      setIntents(formattedTime);
+      if (alarmManager != null) {
+        alarmManager.cancel(pendingIntent);
+      }
     } else {
-      logMessage("toggled: " + isToggled);
+      FormattedTime formattedTime = formattedTimes.get(position);
+      setIntents(formattedTime);
+      setAlarm(((int)formattedTime.get_rawTime()), pendingIntent);
     }
   }
 
+  /*=====================*
+   *  Utility functions  *
+   *=====================*/
   public void showToast(CharSequence message) {
     Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+  }
+
+  public void logMessage(String message) {
+    Log.d("Main", message);
   }
 
   @Override

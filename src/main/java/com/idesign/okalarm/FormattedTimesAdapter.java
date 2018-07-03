@@ -19,7 +19,7 @@ public class FormattedTimesAdapter extends RecyclerView.Adapter<FormattedTimesAd
   private AlarmItemListener mListener;
 
   static class MyViewHolder extends RecyclerView.ViewHolder {
-    private TextView _hourView, _minuteView;
+    private TextView _hourView, _minuteView, _am_pm;
     private Button _deleteButton;
     private Switch _switch;
 
@@ -27,6 +27,7 @@ public class FormattedTimesAdapter extends RecyclerView.Adapter<FormattedTimesAd
       super(view);
       _hourView = view.findViewById(R.id.alarm_item_hour);
       _minuteView = view.findViewById(R.id.alarm_item_minute);
+      _am_pm = view.findViewById(R.id.alarm_am_pm);
       _deleteButton = view.findViewById(R.id.alarm_delete_button);
       _switch = view.findViewById(R.id.alarm_switch);
     }
@@ -55,6 +56,7 @@ public class FormattedTimesAdapter extends RecyclerView.Adapter<FormattedTimesAd
     String finalMin = formattedMinute(formattedTime.get_minute());
     viewHolder._hourView.setText(String.valueOf(formattedTime.get_hour()));
     viewHolder._minuteView.setText(finalMin);
+    viewHolder._am_pm.setText(formattedTime.get_am_pm());
     viewHolder._switch.setChecked(formattedTime.getIsActive());
     viewHolder._deleteButton.setOnClickListener(l -> deleteItem(position));
     viewHolder._switch.setOnClickListener(l -> toggleSwitch(formattedTime, position));
@@ -74,10 +76,10 @@ public class FormattedTimesAdapter extends RecyclerView.Adapter<FormattedTimesAd
   }
 
   private void deleteItem(final int position){
+    mListener.onDelete(position);
     formattedTimes.remove(position);
     notifyItemRemoved(position);
     notifyItemRangeChanged(0, getItemCount());
-    mListener.onDelete(position);
   }
 
   private void toggleSwitch(FormattedTime formattedTime, int position) {
