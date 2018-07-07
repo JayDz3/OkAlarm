@@ -1,8 +1,9 @@
 package com.idesign.okalarm.Interfaces;
 
-import com.idesign.okalarm.FormattedTimesAdapter;
+
+import com.idesign.okalarm.FormattedTime;
 
 public interface AlarmItemListener {
-  void onDelete(int position);
-  void onToggle(boolean isToggled, final int position);
+  void onDeleteAlarm(int position, long rawTime);
+  void onToggleAlarm(boolean isToggled, FormattedTime formattedTime);
 }

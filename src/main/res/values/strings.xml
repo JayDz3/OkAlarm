@@ -2,9 +2,11 @@
     <string name="app_name">OkAlarm</string>
 
     <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="submit"> Submit </string>
     <string name="cancel"> Cancel </string>
-    <string name="alarm_colon"> : </string>
+    <string name="alarm_colon">:</string>
     <string name="delete"> Delete </string>
+    <string name="empty_list_warning"> No Alarms Are Set </string>
+
+    <string name="puzzle_fragment_welcome"> Let us find a solution! </string>
 </resources>

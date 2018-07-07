@@ -7,4 +7,6 @@
     <color name="colorWhite">#FFFFFF</color>
     <color name="colorTransparent">#0000</color>
     <color name="colorSecondary">#6AE6AE</color>
+    <color name="colorLightGray">#EEEEEE</color>
+    <color name="colorDarkGray">#CCCCCC</color>
 </resources>

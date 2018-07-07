@@ -2,11 +2,11 @@ package com.idesign.okalarm;
 
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.SwitchCompat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.Switch;
 import android.widget.TextView;
 
 import com.idesign.okalarm.Interfaces.AlarmItemListener;
@@ -19,15 +19,16 @@ public class FormattedTimesAdapter extends RecyclerView.Adapter<FormattedTimesAd
   private AlarmItemListener mListener;
 
   static class MyViewHolder extends RecyclerView.ViewHolder {
-    private TextView _hourView, _minuteView, _am_pm;
+    private TextView _hourView, _minuteView, _am_pm, _dateView;
     private Button _deleteButton;
-    private Switch _switch;
+    private SwitchCompat _switch;
 
     MyViewHolder(View view) {
       super(view);
       _hourView = view.findViewById(R.id.alarm_item_hour);
       _minuteView = view.findViewById(R.id.alarm_item_minute);
       _am_pm = view.findViewById(R.id.alarm_am_pm);
+      _dateView = view.findViewById(R.id.alarm_date);
       _deleteButton = view.findViewById(R.id.alarm_delete_button);
       _switch = view.findViewById(R.id.alarm_switch);
     }
@@ -37,10 +38,16 @@ public class FormattedTimesAdapter extends RecyclerView.Adapter<FormattedTimesAd
     this.formattedTimes = times;
     setListener(listener);
   }
+
   private void setListener(AlarmItemListener listener) {
     if (mListener == null) {
       mListener = listener;
     }
+  }
+
+  public void setList(List<FormattedTime> times) {
+    this.formattedTimes = times;
+    notifyDataSetChanged();
   }
 
   @Override
@@ -57,9 +64,10 @@ public class FormattedTimesAdapter extends RecyclerView.Adapter<FormattedTimesAd
     viewHolder._hourView.setText(String.valueOf(formattedTime.get_hour()));
     viewHolder._minuteView.setText(finalMin);
     viewHolder._am_pm.setText(formattedTime.get_am_pm());
+    viewHolder._dateView.setText(formattedTime.get_date());
     viewHolder._switch.setChecked(formattedTime.getIsActive());
-    viewHolder._deleteButton.setOnClickListener(l -> deleteItem(position));
-    viewHolder._switch.setOnClickListener(l -> toggleSwitch(formattedTime, position));
+    viewHolder._deleteButton.setOnClickListener(l -> deleteItem(position, formattedTime.get_rawTime()));
+    viewHolder._switch.setOnClickListener(l -> toggleSwitch(formattedTime));
   }
 
   private String formattedMinute(int source) {
@@ -75,20 +83,20 @@ public class FormattedTimesAdapter extends RecyclerView.Adapter<FormattedTimesAd
     return formattedTimes.size();
   }
 
-  private void deleteItem(final int position){
-    mListener.onDelete(position);
+  private void deleteItem(final int position, long rawTime){
+    mListener.onDeleteAlarm(position, rawTime);
     formattedTimes.remove(position);
     notifyItemRemoved(position);
     notifyItemRangeChanged(0, getItemCount());
   }
 
-  private void toggleSwitch(FormattedTime formattedTime, int position) {
+  private void toggleSwitch(FormattedTime formattedTime) {
     if (formattedTime.getIsActive()) {
       formattedTime.set_isActive(false);
-      mListener.onToggle(false, position);
+      mListener.onToggleAlarm(false, formattedTime);
     } else {
       formattedTime.set_isActive(true);
-      mListener.onToggle(true, position);
+      mListener.onToggleAlarm(true, formattedTime);
     }
   }
 

@@ -6,5 +6,7 @@
 
     <dimen name="tenSP"> 10sp </dimen>
     <dimen name="twelveSP"> 12sp </dimen>
+    <dimen name="sixteenSP"> 16sp </dimen>
     <dimen name="eighteenSP"> 18sp </dimen>
+    <dimen name="twentyFourSP"> 24sp </dimen>
 </resources>

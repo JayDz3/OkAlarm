@@ -7,13 +7,13 @@
 
     <TextView
         android:id="@+id/alarm_item_hour"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_margin="@dimen/eightDp"
+        android:layout_marginStart="@dimen/eightDp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        android:textSize="@dimen/eighteenSP"/>
+        android:textSize="@dimen/twentyFourSP"/>
 
     <TextView
         android:id="@+id/alarm_item_colon"
@@ -25,27 +25,37 @@
         android:layout_marginStart="@dimen/twoDp"
         android:layout_marginEnd="@dimen/twoDp"
         android:text="@string/alarm_colon"
-        android:textSize="@dimen/eighteenSP"/>
+        android:textSize="@dimen/twentyFourSP"/>
 
     <TextView
         android:id="@+id/alarm_item_minute"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toEndOf="@id/alarm_item_colon"
-        android:layout_marginStart="@dimen/twoDp"
-        android:textSize="@dimen/eighteenSP"/>
+        android:textSize="@dimen/twentyFourSP"/>
 
     <TextView
         android:id="@+id/alarm_am_pm"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBaseline_toBaselineOf="@id/alarm_item_minute"
         app:layout_constraintStart_toEndOf="@id/alarm_item_minute"
-        android:layout_marginStart="@dimen/eightDp"
-        android:textSize="@dimen/eighteenSP"/>
+        android:layout_marginStart="@dimen/fourDp"
+        android:textSize="@dimen/sixteenSP"/>
+
+    <TextView
+        android:id="@+id/alarm_date"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/sixteenDp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBaseline_toBaselineOf="@id/alarm_item_minute"
+        app:layout_constraintStart_toEndOf="@id/alarm_am_pm"
+        android:textSize="@dimen/twelveSP"
+        android:textStyle="italic"/>
 
     <Button
         android:id="@+id/alarm_delete_button"
@@ -55,17 +65,17 @@
         android:background="@drawable/clear_button"
         android:textSize="@dimen/twelveSP"
         android:textColor="@color/colorPrimary"
-        android:textAllCaps="false"
         app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBaseline_toBaselineOf="@id/alarm_date"
         app:layout_constraintEnd_toStartOf="@id/alarm_switch"/>
 
-    <Switch
+    <android.support.v7.widget.SwitchCompat
         android:id="@+id/alarm_switch"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBaseline_toBaselineOf="@id/alarm_delete_button"
         app:layout_constraintEnd_toEndOf="parent"
-        android:backgroundTint="@color/colorSecondary"/>
+        android:theme="@style/AlarmSwitch"/>
 
 </android.support.constraint.ConstraintLayout>
