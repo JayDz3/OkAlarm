@@ -17,11 +17,11 @@ public class AlarmReceiver extends BroadcastReceiver {
   public AlarmReceiver() {}
 
   public AlarmReceiver(OnAlarmRing listener) {
-  setListener(listener);
+    setListener(listener);
   }
   private void setListener(OnAlarmRing listener) {
     if (mListener == null) {
-    mListener = listener;
+      mListener = listener;
     }
   }
 

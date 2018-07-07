@@ -356,15 +356,15 @@ public class MainActivity extends AppCompatActivity implements AlarmFragment.OnA
   }
 
   public Ringtone findRingtoneByTitle(FormattedTime formattedTime) {
-   Ringtone ringtone = null;
-   boolean isFound = false;
-   for (Ringtone tone : mRingtones) {
-     if (!isFound && tone.getTitle(this).equals(formattedTime.get_title())) {
-       isFound = true;
-       ringtone = tone;
-     }
-   }
-   return ringtone;
+    Ringtone ringtone = null;
+    boolean isFound = false;
+    for (Ringtone tone : mRingtones) {
+      if (!isFound && tone.getTitle(this).equals(formattedTime.get_title())) {
+        isFound = true;
+        ringtone = tone;
+      }
+    }
+    return ringtone;
   }
 
   public void cancelIntent(FormattedTime formattedTime) {
