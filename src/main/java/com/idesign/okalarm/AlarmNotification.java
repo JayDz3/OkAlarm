@@ -16,7 +16,7 @@ import android.support.v4.app.RemoteInput;
 
 
 public class AlarmNotification extends BroadcastReceiver {
-  private static final String TAG = "MyAlarmNotification";
+  public static final String TAG = "MyAlarmNotification";
   public static final String DESCRIPTION = "alert alarms";
   public static final String CHANNEL_ID = "101";
   public static final int ALARM_REQUEST_CODE = 101;
@@ -77,5 +77,4 @@ public class AlarmNotification extends BroadcastReceiver {
     .setPriority(NotificationCompat.PRIORITY_DEFAULT)
     .addAction(action).build();
   }
-
 }

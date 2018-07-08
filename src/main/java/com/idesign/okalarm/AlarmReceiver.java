@@ -59,4 +59,8 @@ public class AlarmReceiver extends BroadcastReceiver {
   public Ringtone getRingtone() {
     return ringtone;
   }
+
+  public void setListenerToNull() {
+    mListener = null;
+  }
 }

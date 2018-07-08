@@ -29,7 +29,6 @@ import android.widget.Toast;
 
 import com.idesign.okalarm.Interfaces.AlarmItemListener;
 import com.idesign.okalarm.Interfaces.OnAlarmRing;
-import com.idesign.okalarm.Interfaces.OnBootListener;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -38,8 +37,7 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity implements AlarmFragment.OnAlarmSet,
 AlarmItemListener,
 OnAlarmRing,
-PuzzleFragment.OnPuzzleListener,
-OnBootListener {
+PuzzleFragment.OnPuzzleListener {
 
   FragmentManager mFragmentManager;
   AlarmFragment newFragment;
@@ -56,7 +54,6 @@ OnBootListener {
   PendingIntent pendingIntent;
 
   private AlarmReceiver mAlarmReceiver;
-  private AlarmNotification mAlarmNotifier;
 
   private List<Long> times;
   private List<FormattedTime> formattedTimes;
@@ -163,9 +160,6 @@ OnBootListener {
 
   public void showToast(CharSequence message) {
     Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
-  }
-  public String onBoot() {
-    return "Alarm!";
   }
 
   public void toggleView() {
@@ -537,6 +531,12 @@ OnBootListener {
   @Override
   protected void onStop() {
     super.onStop();
+  }
+
+  @Override
+  public void onDestroy() {
+    super.onDestroy();
+    mAlarmReceiver.setListenerToNull();
   }
 
   @Override
