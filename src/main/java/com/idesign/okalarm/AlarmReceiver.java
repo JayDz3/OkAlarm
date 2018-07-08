@@ -13,6 +13,7 @@ public class AlarmReceiver extends BroadcastReceiver {
 
   private static OnAlarmRing mListener;
   private static Ringtone ringtone;
+  private static final String EXTRA_COLD_BOOT = "extra.cold";
 
   public AlarmReceiver() {}
 
@@ -30,10 +31,20 @@ public class AlarmReceiver extends BroadcastReceiver {
     if (mListener != null) {
       mListener.onRing(ringtone);
     } else {
-      Uri alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
-      ringtone = RingtoneManager.getRingtone(context, alarmUri);
-      ringtone.play();
+      broadCastNotification(context);
     }
+  }
+
+  /* private void broadCastColdIntent(Context context) {
+      Intent mainIntent = new Intent(context.getApplicationContext(), MainActivity.class);
+      mainIntent.putExtra(EXTRA_COLD_BOOT, true);
+      mainIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+      context.startActivity(mainIntent);
+  } */
+
+  private void broadCastNotification(Context context) {
+    AlarmNotification mNotification = new AlarmNotification();
+    mNotification.createNotificationChannel(context);
   }
 
   public void setRingtone(Context context, Ringtone tone) {

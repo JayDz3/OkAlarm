@@ -18,6 +18,9 @@
         </activity>
         <receiver android:name=".AlarmReceiver">
         </receiver>
+        <receiver android:name=".AlarmNotification"
+            android:process=":remote">
+        </receiver>
     </application>
 
 </manifest>

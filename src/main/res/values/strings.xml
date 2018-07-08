@@ -9,4 +9,9 @@
     <string name="empty_list_warning"> No Alarms Are Set </string>
 
     <string name="puzzle_fragment_welcome"> Let us find a solution! </string>
+
+    <string name="notification_channel_name">MyAlarmNotification</string>
+    <string name="notification_channel_description">Alert user to alarm clock</string>
+
+    <string name="reply_label">reply</string>
 </resources>

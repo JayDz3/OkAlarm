@@ -5,6 +5,7 @@ import android.animation.AnimatorListenerAdapter;
 import android.app.AlarmManager;
 
 import android.app.PendingIntent;
+import android.app.RemoteInput;
 import android.arch.lifecycle.Observer;
 import android.arch.lifecycle.ViewModelProviders;
 import android.content.Context;
@@ -16,6 +17,7 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
+import android.support.v4.app.NotificationManagerCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.DividerItemDecoration;
@@ -23,15 +25,21 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.view.ViewPropertyAnimator;
+import android.widget.Toast;
 
 import com.idesign.okalarm.Interfaces.AlarmItemListener;
 import com.idesign.okalarm.Interfaces.OnAlarmRing;
+import com.idesign.okalarm.Interfaces.OnBootListener;
 
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements AlarmFragment.OnAlarmSet, AlarmItemListener, OnAlarmRing, PuzzleFragment.OnPuzzleListener {
+public class MainActivity extends AppCompatActivity implements AlarmFragment.OnAlarmSet,
+AlarmItemListener,
+OnAlarmRing,
+PuzzleFragment.OnPuzzleListener,
+OnBootListener {
 
   FragmentManager mFragmentManager;
   AlarmFragment newFragment;
@@ -48,6 +56,7 @@ public class MainActivity extends AppCompatActivity implements AlarmFragment.OnA
   PendingIntent pendingIntent;
 
   private AlarmReceiver mAlarmReceiver;
+  private AlarmNotification mAlarmNotifier;
 
   private List<Long> times;
   private List<FormattedTime> formattedTimes;
@@ -58,17 +67,19 @@ public class MainActivity extends AppCompatActivity implements AlarmFragment.OnA
   public static final String EXTRA_MINUTE = "extra.minute";
   public static final String EXTRA_AM_PM = "extra.ampm";
   public static final String EXTRA_RAW_TIME = "extra.rawtime";
+  public static final String EXTRA_COLD_BOOT = "extra.cold";
   private int mFragment_int = -1;
   private int _hour;
   private int _minute;
   private String _am_pm;
   private long _rawtime;
+  boolean _isCorrect = false;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
-
+    Intent getIntent = getIntent();
     recyclerView = findViewById(R.id.main_recycler_view);
     fab = findViewById(R.id.main_fab);
     fab.setOnClickListener(l -> setFragment());
@@ -101,12 +112,60 @@ public class MainActivity extends AppCompatActivity implements AlarmFragment.OnA
 
     if (savedInstanceState != null) {
       getValuesFromBundle(savedInstanceState);
+      if (alarmIsActive()) {
+        goToPuzzleFragment();
+        return;
+      }
+      toggleView();
+    } else {
+      CharSequence message = getMessageText(getIntent);
+      String _message = (String) message;
+      String answer = "saturday";
+      boolean doReturn = screenMessage(_message, answer);
+      if (!doReturn) {
+        toggleView();
+      }
     }
-    if (alarmIsActive()) {
+  }
+
+  private CharSequence getMessageText(Intent intent) {
+    String KEY_TEXT_REPLY = "key.text.reply";
+
+    Bundle remoteInput = RemoteInput.getResultsFromIntent(intent);
+    if (remoteInput != null) {
+       return remoteInput.getCharSequence(KEY_TEXT_REPLY);
+    }
+    return null;
+  }
+
+  public boolean screenMessage(String message, String answer) {
+    if (message != null) {
+      if (message.equalsIgnoreCase(answer)) {
+        _isCorrect = true;
+      }
+      broadcastCloseNotificationTray();
+      if (mAlarmReceiver.getRingtone() == null) {
+        setDefaultAlarm();
+      }
+      mAlarmReceiver.getRingtone().play();
       goToPuzzleFragment();
-      return;
+      return true;
     }
-    toggleView();
+    return false;
+  }
+
+  public void broadcastCloseNotificationTray() {
+    NotificationManagerCompat manager = NotificationManagerCompat.from(this);
+    manager.cancel(AlarmNotification.ALARM_REQUEST_CODE);
+    Intent closeIntent = new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS);
+    sendBroadcast(closeIntent);
+  }
+
+  public void showToast(CharSequence message) {
+    Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+  }
+  public String onBoot() {
+    return "Alarm!";
   }
 
   public void toggleView() {
