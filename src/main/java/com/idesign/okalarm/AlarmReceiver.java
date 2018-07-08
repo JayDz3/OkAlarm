@@ -3,64 +3,71 @@ package com.idesign.okalarm;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.media.Ringtone;
-import android.media.RingtoneManager;
-import android.net.Uri;
-
-import com.idesign.okalarm.Interfaces.OnAlarmRing;
+import android.support.v4.content.LocalBroadcastManager;
+import android.widget.Toast;
 
 public class AlarmReceiver extends BroadcastReceiver {
 
-  private static OnAlarmRing mListener;
-  private static Ringtone ringtone;
-  private static final String EXTRA_COLD_BOOT = "extra.cold";
+  private static OnAlarmReceiver mListener;
 
   public AlarmReceiver() {}
 
-  public AlarmReceiver(OnAlarmRing listener) {
+  public AlarmReceiver(OnAlarmReceiver listener) {
     setListener(listener);
   }
-  private void setListener(OnAlarmRing listener) {
+
+  public void setListener(OnAlarmReceiver listener) {
     if (mListener == null) {
       mListener = listener;
     }
   }
-
   @Override
   public void onReceive(Context context, Intent intent) {
-    if (mListener != null) {
-      mListener.onRing(ringtone);
-    } else {
-      broadCastNotification(context);
+    if (intent.getExtras() != null) {
+      if (mListener == null) {
+        Intent broadcastIntent = new Intent();
+        String finalTitle;
+        if (intent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE) == null) {
+          finalTitle = Constants.NO_RINGTONE;
+        } else {
+          finalTitle = intent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE);
+        }
+        broadcastIntent.putExtra(Constants.BOOT_TAG, Constants.NOTIFICATION_CLASS_TAG);
+        broadcastIntent.putExtra(Constants.EXTRA_RINGTONE_TITLE, finalTitle);
+        broadcastIntent.putExtra(Constants.EXTRA_RAW_TIME, intent.getIntExtra(Constants.EXTRA_RAW_TIME, 0));
+        broadCastNotification(context, broadcastIntent);
+        if (context instanceof OnAlarmReceiver) {
+          mListener = (OnAlarmReceiver) context;
+        }
+        return;
+      }
+      if (intent.getAction() != null && intent.getAction().equalsIgnoreCase(Constants.ACTION_MANAGE_ALARM)) {
+        String ringtoneTitle = intent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE);
+        int rawTime = intent.getIntExtra(Constants.EXTRA_RAW_TIME, 0);
+        if (ringtoneTitle == null) {
+          ringtoneTitle = Constants.NO_RINGTONE;
+        }
+        Intent sendIntent = new Intent(Constants.ACTION_RECEIVE_ALARM);
+        sendIntent.putExtra(Constants.EXTRA_RINGTONE_TITLE, ringtoneTitle);
+        sendIntent.putExtra(Constants.EXTRA_RAW_TIME, rawTime);
+        sendIntent.putExtra(Constants.BOOT_TAG, Constants.RECEIVE_ALARM_TAG);
+        mListener.onAction(sendIntent);
+      }
     }
   }
 
-  /* private void broadCastColdIntent(Context context) {
-      Intent mainIntent = new Intent(context.getApplicationContext(), MainActivity.class);
-      mainIntent.putExtra(EXTRA_COLD_BOOT, true);
-      mainIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-      context.startActivity(mainIntent);
-  } */
 
-  private void broadCastNotification(Context context) {
+  private void broadCastNotification(Context context, Intent intent) {
     AlarmNotification mNotification = new AlarmNotification();
-    mNotification.createNotificationChannel(context);
-  }
-
-  public void setRingtone(Context context, Ringtone tone) {
-    if (tone == null) {
-      Uri alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
-      ringtone = RingtoneManager.getRingtone(context, alarmUri);
-    } else {
-      ringtone = tone;
-    }
-  }
-
-  public Ringtone getRingtone() {
-    return ringtone;
+    mNotification.createNotificationChannel(context, intent);
   }
 
   public void setListenerToNull() {
     mListener = null;
   }
+
+  public interface OnAlarmReceiver {
+    void onAction(Intent intent);
+  }
+
 }
