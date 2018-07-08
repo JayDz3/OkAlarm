@@ -9,18 +9,22 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+
         <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <action android:name="ReceiveAlarm" />
+                <action android:name="com.idesign.okalarm.ReceiveAlarm" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
         <receiver android:name="com.idesign.okalarm.AlarmReceiver">
         </receiver>
-        <receiver android:name="com.idesign.okalarm.AlarmNotification"
-            android:process=":remote">
+
+        <receiver android:name="com.idesign.okalarm.AlarmNotification" android:process=":remote">
         </receiver>
+
+        <service android:name=".HandleBroadcastIntentService" />
     </application>
 
 </manifest>

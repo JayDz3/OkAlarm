@@ -2,7 +2,6 @@ package com.idesign.okalarm;
 
 import android.app.PendingIntent;
 import android.content.Intent;
-import android.content.IntentFilter;
 
 public class Constants {
   public static final String NOTIFICATION_CLASS_TAG = "MyAlarmNotification";
@@ -29,8 +28,9 @@ public class Constants {
   // Action Strings //
   public static final String ACTION_BOOT_COMPLETED = Intent.ACTION_BOOT_COMPLETED;
   public static final String ACTION_CLOSE_DIALOGS = Intent.ACTION_CLOSE_SYSTEM_DIALOGS;
-  public static final String ACTION_MANAGE_ALARM = "android.intent.action.ManageAlarm";
-  public static final String ACTION_RECEIVE_ALARM = "ReceiveAlarm";
+  public static final String ACTION_MANAGE_ALARM = "com.idesign.okalarm.ManageAlarm";
+  public static final String ACTION_RECEIVE_ALARM = "com.idesign.okalarm.ReceiveAlarm";
+  public static final String ACTION_HANDLE_INTENT = "com.idesign.okalarm.HandleIntent";
 
   public static final String EXTRA_RINGTONE_TITLE = "ringtone.title";
   public static final String EXTRA_RAW_TIME = "raw.time";

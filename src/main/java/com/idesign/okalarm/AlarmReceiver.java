@@ -3,28 +3,20 @@ package com.idesign.okalarm;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.support.v4.content.LocalBroadcastManager;
-import android.widget.Toast;
 
 public class AlarmReceiver extends BroadcastReceiver {
-
-  private static OnAlarmReceiver mListener;
+  private static int isActivated = 0;
 
   public AlarmReceiver() {}
 
-  public AlarmReceiver(OnAlarmReceiver listener) {
-    setListener(listener);
+  public AlarmReceiver(int setToOne) {
+    isActivated = setToOne;
   }
 
-  public void setListener(OnAlarmReceiver listener) {
-    if (mListener == null) {
-      mListener = listener;
-    }
-  }
   @Override
   public void onReceive(Context context, Intent intent) {
     if (intent.getExtras() != null) {
-      if (mListener == null) {
+      if (isActivated == 0) {
         Intent broadcastIntent = new Intent();
         String finalTitle;
         if (intent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE) == null) {
@@ -36,9 +28,7 @@ public class AlarmReceiver extends BroadcastReceiver {
         broadcastIntent.putExtra(Constants.EXTRA_RINGTONE_TITLE, finalTitle);
         broadcastIntent.putExtra(Constants.EXTRA_RAW_TIME, intent.getIntExtra(Constants.EXTRA_RAW_TIME, 0));
         broadCastNotification(context, broadcastIntent);
-        if (context instanceof OnAlarmReceiver) {
-          mListener = (OnAlarmReceiver) context;
-        }
+        isActivated = 1;
         return;
       }
       if (intent.getAction() != null && intent.getAction().equalsIgnoreCase(Constants.ACTION_MANAGE_ALARM)) {
@@ -51,23 +41,23 @@ public class AlarmReceiver extends BroadcastReceiver {
         sendIntent.putExtra(Constants.EXTRA_RINGTONE_TITLE, ringtoneTitle);
         sendIntent.putExtra(Constants.EXTRA_RAW_TIME, rawTime);
         sendIntent.putExtra(Constants.BOOT_TAG, Constants.RECEIVE_ALARM_TAG);
-        mListener.onAction(sendIntent);
+        onStartService(context, sendIntent);
       }
     }
+
   }
 
+   public void onStartService(Context context, Intent inboundIntent) {
+    Intent i = new Intent(context, HandleBroadcastIntentService.class);
+    i.putExtra(Constants.BOOT_TAG, Constants.RECEIVE_ALARM_TAG);
+    i.putExtra(Constants.EXTRA_RINGTONE_TITLE, inboundIntent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE));
+    i.putExtra(Constants.EXTRA_RAW_TIME, inboundIntent.getIntExtra(Constants.EXTRA_RAW_TIME, 0));
+    context.startService(i);
+  }
 
   private void broadCastNotification(Context context, Intent intent) {
     AlarmNotification mNotification = new AlarmNotification();
     mNotification.createNotificationChannel(context, intent);
-  }
-
-  public void setListenerToNull() {
-    mListener = null;
-  }
-
-  public interface OnAlarmReceiver {
-    void onAction(Intent intent);
   }
 
 }

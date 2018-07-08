@@ -8,8 +8,10 @@ import android.app.PendingIntent;
 import android.app.RemoteInput;
 import android.arch.lifecycle.Observer;
 import android.arch.lifecycle.ViewModelProviders;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.database.Cursor;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
@@ -19,6 +21,7 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.NotificationManagerCompat;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.DividerItemDecoration;
@@ -36,8 +39,7 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements AlarmFragment.OnAlarmSet,
 AlarmItemListener,
-PuzzleFragment.OnPuzzleListener,
-AlarmReceiver.OnAlarmReceiver {
+PuzzleFragment.OnPuzzleListener {
 
   FragmentManager mFragmentManager;
   AlarmFragment newFragment;
@@ -49,13 +51,12 @@ AlarmReceiver.OnAlarmReceiver {
 
   private AlarmManager alarmManager;
   private List<Ringtone> mRingtones;
-  Ringtone mRingtone;
   Ringtone activeRingtone;
 
   Intent intent;
   PendingIntent pendingIntent;
 
-  private AlarmReceiver mAlarmReceiver;
+  AlarmReceiver mAlarmReceiver;
 
   private List<Long> times;
   private List<FormattedTime> formattedTimes;
@@ -66,6 +67,8 @@ AlarmReceiver.OnAlarmReceiver {
   public static final String EXTRA_MINUTE = "extra.minute";
   public static final String EXTRA_AM_PM = "extra.ampm";
   public static final String EXTRA_RAW_TIME = "extra.rawtime";
+  public static final String EXTRA_RINGTONE_TITLE = "ringtone.title";
+
   private int mFragment_int = -1;
   private int _hour;
   private int _minute;
@@ -79,9 +82,6 @@ AlarmReceiver.OnAlarmReceiver {
     setContentView(R.layout.activity_main);
 
     Intent getIntent = getIntent();
-    if (getIntent != null && getIntent.getAction() != null) {
-      showToast(getIntent.getAction());
-    }
     recyclerView = findViewById(R.id.main_recycler_view);
     fab = findViewById(R.id.main_fab);
     fab.setOnClickListener(l -> setFragment());
@@ -113,12 +113,15 @@ AlarmReceiver.OnAlarmReceiver {
 
     if (savedInstanceState != null) {
       getValuesFromBundle(savedInstanceState);
+
       if (alarmIsActive()) {
         goToPuzzleFragment();
         return;
       }
       toggleView();
+
     } else {
+
       CharSequence message = getMessageText(getIntent);
       String _message = (String) message;
       String answer = "saturday";
@@ -131,11 +134,11 @@ AlarmReceiver.OnAlarmReceiver {
 
   private CharSequence getMessageText(Intent intent) {
     String KEY_TEXT_REPLY = "key.text.reply";
-
     if (intent.getExtras() != null) {
       if (intent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE) != null) {
         String ringtoneTitle = intent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE);
         int rawTime = intent.getIntExtra(Constants.EXTRA_RAW_TIME, 0);
+
         if (ringtoneTitle.equalsIgnoreCase(Constants.NO_RINGTONE)) {
           Uri alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
           activeRingtone = RingtoneManager.getRingtone(this, alarmUri);
@@ -144,6 +147,7 @@ AlarmReceiver.OnAlarmReceiver {
         }
       }
     }
+
     Bundle remoteInput = RemoteInput.getResultsFromIntent(intent);
     if (remoteInput != null) {
        return remoteInput.getCharSequence(KEY_TEXT_REPLY);
@@ -156,8 +160,12 @@ AlarmReceiver.OnAlarmReceiver {
       if (message.equalsIgnoreCase(answer)) {
         _isCorrect = true;
       }
+      if (_isCorrect) {
+        showToast("Correct!");
+      } else {
+        showToast("Sorry, wrong day");
+      }
       broadcastCloseNotificationTray();
-      activeRingtone.play();
       goToPuzzleFragment();
       return true;
     }
@@ -213,6 +221,7 @@ AlarmReceiver.OnAlarmReceiver {
    *  Alarm has gone off, attach Puzzle Fragment   *
    *===============================================*/
   public void setFragment(int hourOfDay, int minute, String am_pm, long millis) {
+    activeRingtone.play();
     if (puzzleFragment != null && puzzleFragment.isVisible()) {
       return;
     }
@@ -315,26 +324,27 @@ AlarmReceiver.OnAlarmReceiver {
       calendar.setTimeInMillis(calMilliseconds);
     }
 
-    if (!times.contains(calendar.getTimeInMillis())) {
-      mRingtone = ringtone;
-      times.add(calendar.getTimeInMillis());
-      int baseHour = am_pm.equals("AM") ? calendar.get(Calendar.HOUR_OF_DAY) : calendar.get(Calendar.HOUR);
-      int hour = getHourByInteger(baseHour);
-      int _monthInt = calendar.get(Calendar.MONTH);
-      String _month = getMonth(_monthInt);
-      String _date = String.valueOf(calendar.get(Calendar.DAY_OF_MONTH));
-      String _combined = _month + " " + _date;
-      String _title = mRingtone == null ? null : mRingtone.getTitle(this);
-
-      FormattedTime formattedTime = new FormattedTime(calendar.getTimeInMillis(), hour, calendar.get(Calendar.MINUTE), am_pm, _combined, true, false, _title);
-      _rawtime = formattedTime.get_rawTime();
-      addNewItem(formattedTime);
-      startIntent(formattedTime);
-      if (alarmManager != null) {
-        alarmManager.set(AlarmManager.RTC_WAKEUP, formattedTime.get_rawTime(), pendingIntent);
-      }
+    if (times.contains(calendar.getTimeInMillis())) {
+      showRecyclerView();
+      return;
     }
-    showRecyclerView();
+    times.add(calendar.getTimeInMillis());
+    int baseHour = am_pm.equals("AM") ? calendar.get(Calendar.HOUR_OF_DAY) : calendar.get(Calendar.HOUR);
+    int hour = getHourByInteger(baseHour);
+    int _monthInt = calendar.get(Calendar.MONTH);
+    String _month = getMonth(_monthInt);
+    String _date = String.valueOf(calendar.get(Calendar.DAY_OF_MONTH));
+    String _combined = _month + " " + _date;
+    String _title = ringtone == null ? null : ringtone.getTitle(this);
+
+    FormattedTime formattedTime = new FormattedTime(calendar.getTimeInMillis(), hour, calendar.get(Calendar.MINUTE), am_pm, _combined, true, false, _title);
+    _rawtime = formattedTime.get_rawTime();
+    addNewItem(formattedTime);
+    startIntent(formattedTime);
+    if (alarmManager != null) {
+      alarmManager.set(AlarmManager.RTC_WAKEUP, formattedTime.get_rawTime(), pendingIntent);
+    }
+
   }
 
   public void setCalendarValues(Calendar calendar, int hourOfDay, int minute) {
@@ -504,27 +514,39 @@ AlarmReceiver.OnAlarmReceiver {
     showRecyclerView();
   }
 
-  public void onAction(Intent intent) {
-    String action = intent.getAction();
-    if (action != null && action.equalsIgnoreCase(Constants.ACTION_RECEIVE_ALARM)) {
-      String bootTag = intent.getStringExtra(Constants.BOOT_TAG);
-      String ringtoneTitle = intent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE);
-      int time = intent.getIntExtra(Constants.EXTRA_RAW_TIME, 0);
-      if (ringtoneTitle.equalsIgnoreCase(Constants.NO_RINGTONE)) {
-        Uri alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
-        activeRingtone = RingtoneManager.getRingtone(this, alarmUri);
-      } else {
-        activeRingtone = findRingtoneByTitle(ringtoneTitle);
+  /*======================================*
+   *  From Intent Service                 *
+   *  Handles Intent from Alarm Service   *
+   *======================================*/
+  private BroadcastReceiver myReceiver = new BroadcastReceiver() {
+    @Override
+    public void onReceive(Context context, Intent intent) {
+      int resultCode = intent.getIntExtra("resultCode", RESULT_CANCELED);
+      if (resultCode == RESULT_OK) {
+        if (intent.getAction() != null && intent.getAction().equalsIgnoreCase(Constants.ACTION_HANDLE_INTENT)) {
+
+          String bootTag = intent.getStringExtra(Constants.BOOT_TAG);
+          int time = intent.getIntExtra(Constants.EXTRA_RAW_TIME, 0);
+
+          String ringtoneTitle = intent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE);
+          if (ringtoneTitle.equalsIgnoreCase(Constants.NO_RINGTONE)) {
+            Uri alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
+            activeRingtone = RingtoneManager.getRingtone(context, alarmUri);
+          } else {
+            activeRingtone = findRingtoneByTitle(ringtoneTitle);
+          }
+          goToPuzzleFragment();
+        }
       }
-      activeRingtone.play();
-      goToPuzzleFragment();
     }
-  }
+  };
 
   @Override
   protected void onStart() {
     super.onStart();
-    mAlarmReceiver = new AlarmReceiver(MainActivity.this);
+      mAlarmReceiver = new AlarmReceiver(1);
+      IntentFilter filter = new IntentFilter(Constants.ACTION_HANDLE_INTENT);
+      LocalBroadcastManager.getInstance(this).registerReceiver(myReceiver, filter);
   }
 
   @Override
@@ -535,7 +557,7 @@ AlarmReceiver.OnAlarmReceiver {
   @Override
   protected void onStop() {
     super.onStop();
-    mAlarmReceiver.setListenerToNull();
+    LocalBroadcastManager.getInstance(this).unregisterReceiver(myReceiver);
   }
 
   @Override
@@ -545,11 +567,20 @@ AlarmReceiver.OnAlarmReceiver {
 
   @Override
   public void onSaveInstanceState(Bundle outState) {
+    String ringtoneTitle;
+    if (activeRingtone == null) {
+      ringtoneTitle = null;
+    } else  {
+      ringtoneTitle = activeRingtone.getTitle(this);
+      activeRingtone.stop();
+      activeRingtone = null;
+    }
     outState.putInt(EXTRA_FRAGMENT_INT, mFragment_int);
     outState.putInt(EXTRA_HOUR, _hour);
     outState.putInt(EXTRA_MINUTE, _minute);
     outState.putString(EXTRA_AM_PM, _am_pm);
     outState.putLong(EXTRA_RAW_TIME, _rawtime);
+    outState.putString(EXTRA_RINGTONE_TITLE, ringtoneTitle);
     super.onSaveInstanceState(outState);
   }
 
@@ -560,6 +591,10 @@ AlarmReceiver.OnAlarmReceiver {
       _minute = savedInstanceState.getInt(EXTRA_MINUTE);
       _am_pm = savedInstanceState.getString(EXTRA_AM_PM);
       _rawtime = savedInstanceState.getLong(EXTRA_RAW_TIME);
+      String ringtoneTitle = savedInstanceState.getString(EXTRA_RINGTONE_TITLE);
+      if (ringtoneTitle != null) {
+        activeRingtone = findRingtoneByTitle(ringtoneTitle);
+      }
     }
   }
 

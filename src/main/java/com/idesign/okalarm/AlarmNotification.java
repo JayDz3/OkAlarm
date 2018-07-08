@@ -15,7 +15,6 @@ import android.support.v4.app.NotificationManagerCompat;
 import android.support.v4.app.RemoteInput;
 import android.widget.Toast;
 
-
 public class AlarmNotification extends BroadcastReceiver {
 
   public AlarmNotification() { }
