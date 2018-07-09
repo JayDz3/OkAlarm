@@ -22,6 +22,9 @@
         </receiver>
 
         <receiver android:name="com.idesign.okalarm.AlarmNotification" android:process=":remote" android:exported="false">
+            <intent-filter>
+                <action android:name="com.idesign.okalarm.HandleNotification" />
+            </intent-filter>
         </receiver>
 
         <service android:name=".HandleBroadcastIntentService" />

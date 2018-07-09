@@ -26,6 +26,7 @@ public class Constants {
   public static final int FLAG_UPDATE_CURRENT = PendingIntent.FLAG_UPDATE_CURRENT;
 
   // Action Strings //
+  public static final String ACTION_HANDLE_NOTIFICATION = "com.idesign.okalarm.HandleNotification";
   public static final String ACTION_BOOT_COMPLETED = Intent.ACTION_BOOT_COMPLETED;
   public static final String ACTION_CLOSE_DIALOGS = Intent.ACTION_CLOSE_SYSTEM_DIALOGS;
   public static final String ACTION_MANAGE_ALARM = "com.idesign.okalarm.ManageAlarm";

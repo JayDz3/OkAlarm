@@ -16,6 +16,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.icu.text.SimpleDateFormat;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
@@ -37,7 +38,9 @@ import com.idesign.okalarm.ViewModels.FormattedTimesViewModel;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity implements AlarmFragment.OnAlarmSet,
 AlarmItemListener,
@@ -127,22 +130,18 @@ PuzzleFragment.OnPuzzleListener {
     } else {
       String _message = (String) getMessageText(getIntent);
       String itemUri = getIntent.getStringExtra(Constants.EXTRA_URI);
-      String answer = "saturday";
+      String answer = getNameOfDay();
+
       boolean doReturn = screenMessage(_message, answer, itemUri);
       boolean isActiveMessage = false;
       StatusBarNotification[] notifications = getNotifications();
-      List<StatusBarNotification> appNotifications = new ArrayList<>();
-      if (notifications.length > 0) {
-        for (StatusBarNotification notification : notifications) {
-          if (notification.getNotification().getChannelId().equalsIgnoreCase(Constants.NOTIFICATION_CHANNEL_ID)) {
-           isActiveMessage = true;
-           appNotifications.add(notification);
-          }
-        }
-      }
-      if (isActiveMessage) {
+      List<StatusBarNotification> appNotifications = myNotifications(notifications);
+
+      if (appNotifications.size() > 0) {
+        isActiveMessage = true;
         Bundle extras = appNotifications.get(0).getNotification().extras;
         String messageUri = extras.getString(Constants.EXTRA_URI);
+        clearNotifications(appNotifications);
         startRingtoneService(this, messageUri);
         goToPuzzleFragment();
       }
@@ -151,6 +150,21 @@ PuzzleFragment.OnPuzzleListener {
       }
     }
     disableNotificationService();
+  }
+
+  public String getNameOfDay() {
+    Calendar calendar = Calendar.getInstance();
+    Date date = calendar.getTime();
+    return new SimpleDateFormat("EEEE", Locale.ENGLISH).format(date.getTime());
+  }
+
+  public void clearNotifications(List<StatusBarNotification> notifications) {
+    NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+    if (notificationManager != null) {
+      for (StatusBarNotification notification : notifications) {
+        notificationManager.cancel(notification.getId());
+      }
+    }
   }
 
   private CharSequence getMessageText(Intent intent) {
@@ -197,15 +211,10 @@ PuzzleFragment.OnPuzzleListener {
   }
 
   public void broadcastCloseNotificationTray() {
-    NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
     StatusBarNotification[] notifications = getNotifications();
-    if (notificationManager != null) {
-      for (StatusBarNotification notification : notifications) {
-        if (notification.getNotification().getChannelId().equalsIgnoreCase(Constants.NOTIFICATION_CHANNEL_ID)) {
-          notificationManager.cancel(notification.getId());
-        }
-      }
-    }
+    List<StatusBarNotification> appNotifications = myNotifications(notifications);
+
+    clearNotifications(appNotifications);
     Intent closeIntent = new Intent(Constants.ACTION_CLOSE_DIALOGS);
     sendBroadcast(closeIntent);
   }
@@ -217,6 +226,16 @@ PuzzleFragment.OnPuzzleListener {
     } else {
       return new StatusBarNotification[0];
     }
+  }
+
+  public List<StatusBarNotification> myNotifications(StatusBarNotification[] allNotifications) {
+    List<StatusBarNotification> appNotifications = new ArrayList<>();
+    for (StatusBarNotification notification : allNotifications) {
+      if (notification.getNotification().getChannelId().equalsIgnoreCase(Constants.NOTIFICATION_CHANNEL_ID)) {
+        appNotifications.add(notification);
+      }
+    }
+    return appNotifications;
   }
 
   public void disableNotificationService() {

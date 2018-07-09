@@ -25,17 +25,10 @@ public class AlarmNotification extends BroadcastReceiver {
     if (intent != null && intent.getExtras() != null) {
       Bundle extras = intent.getExtras();
       String bootTag = extras.getString(Constants.BOOT_TAG);
-      if (bootTag != null) {
-        showToast(context, bootTag);
-      if (bootTag.equalsIgnoreCase(Constants.NOTIFICATION_CLASS_TAG)) {
+      if (bootTag != null && bootTag.equalsIgnoreCase(Constants.NOTIFICATION_CLASS_TAG)) {
         createNotificationChannel(context, intent);
       }
-      }
     }
-  }
-
-  public void showToast(Context context, String message) {
-    Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
   }
 
   public void createNotificationChannel(Context context, Intent receivedIntent) {
