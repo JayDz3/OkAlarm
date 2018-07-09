@@ -109,7 +109,6 @@ PuzzleFragment.OnPuzzleListener {
 
     RingtoneManager ringtoneManager = new RingtoneManager(MainActivity.this);
     Cursor cursor = ringtoneManager.getCursor();
-
     while (cursor.moveToNext()) {
       int currentPos = cursor.getPosition();
       mRingtones.add(ringtoneManager.getRingtone(currentPos));
@@ -120,22 +119,20 @@ PuzzleFragment.OnPuzzleListener {
     viewModel.getItems().observe(this, itemObserver);
 
     warningView.setVisibility(View.GONE);
+
     if (savedInstanceState != null) {
       getValuesFromBundle(savedInstanceState);
-
       if (alarmIsActive()) {
         goToPuzzleFragment();
         return;
       }
       toggleView();
-
     } else {
       StatusBarNotification[] notifications = getNotifications();
       if (notifications.length > 0) {
         showToast("Active notifications");
       }
-      CharSequence message = getMessageText(getIntent);
-      String _message = (String) message;
+      String _message = (String) getMessageText(getIntent);
       String answer = "saturday";
       boolean doReturn = screenMessage(_message, answer);
       if (!doReturn) {
@@ -172,8 +169,6 @@ PuzzleFragment.OnPuzzleListener {
     if (message != null) {
       if (message.equalsIgnoreCase(answer)) {
         _isCorrect = true;
-      }
-      if (_isCorrect) {
         showToast("Correct!");
       } else {
         showToast("Sorry, wrong day");
@@ -186,7 +181,7 @@ PuzzleFragment.OnPuzzleListener {
   }
 
   public void broadcastCloseNotificationTray() {
-    NotificationManager notificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
+    NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
     StatusBarNotification[] notifications = getNotifications();
     if (notificationManager != null) {
       for (StatusBarNotification notification : notifications) {
@@ -201,7 +196,7 @@ PuzzleFragment.OnPuzzleListener {
 
   public StatusBarNotification[] getNotifications() {
     NotificationManager notificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
-    if (notificationManager != null && notificationManager.getActiveNotifications() != null) {
+    if (notificationManager != null) {
       return notificationManager.getActiveNotifications();
     } else {
       return new StatusBarNotification[0];
@@ -285,13 +280,13 @@ PuzzleFragment.OnPuzzleListener {
         super.onAnimationEnd(animation);
         recyclerView.setVisibility(View.GONE);
         fab.setVisibility(View.GONE);
+        warningView.setVisibility(View.GONE);
         puzzleFragment = PuzzleFragment.newInstance(hourOfDay, minute, am_pm);
         _hour = hourOfDay;
         _minute = minute;
         _am_pm = am_pm;
         _rawtime = millis;
         attachFragment(puzzleFragment);
-        warningView.setVisibility(View.GONE);
       }
     };
   }
@@ -306,8 +301,8 @@ PuzzleFragment.OnPuzzleListener {
         newFragment = AlarmFragment.newInstance();
         recyclerView.setVisibility(View.GONE);
         fab.setVisibility(View.GONE);
-        attachFragment(newFragment);
         warningView.setVisibility(View.GONE);
+        attachFragment(newFragment);
       }
     };
   }
@@ -500,8 +495,10 @@ PuzzleFragment.OnPuzzleListener {
     intent.putExtra(Constants.BOOT_TAG, Constants.ALARM_CLASS_TAG);
     intent.setAction(Constants.ACTION_MANAGE_ALARM);
     pendingIntent = PendingIntent.getBroadcast(this, time, intent, 0);
+    if (alarmManager != null) {
+      alarmManager.cancel(pendingIntent);
+    }
   }
-
 
   public void silenceAlarm() {
     if (activeRingtone != null && activeRingtone.isPlaying()) {
@@ -518,10 +515,12 @@ PuzzleFragment.OnPuzzleListener {
     times.remove(rawTime);
     FormattedTime formattedTime = formattedTimes.get(position);
     cancelIntent(formattedTime);
-    if (alarmManager != null) {
-      alarmManager.cancel(pendingIntent);
-    }
     viewModel.setFormattedTimes(formattedTimes);
+    if (formattedTimes.size() == 1) {
+      warningView.setVisibility(View.VISIBLE);
+    } else {
+      warningView.setVisibility(View.GONE);
+    }
   }
 
   public void onReady() {
@@ -535,9 +534,6 @@ PuzzleFragment.OnPuzzleListener {
     if (!isToggled) {
       silenceAlarm();
       cancelIntent(formattedTime);
-      if (alarmManager != null) {
-        alarmManager.cancel(pendingIntent);
-      }
     } else {
       startIntent(formattedTime);
       alarmManager.set(AlarmManager.RTC_WAKEUP, formattedTime.get_rawTime(), pendingIntent);
@@ -573,11 +569,10 @@ PuzzleFragment.OnPuzzleListener {
       int resultCode = intent.getIntExtra("resultCode", RESULT_CANCELED);
       if (resultCode == RESULT_OK) {
         if (intent.getAction() != null && intent.getAction().equalsIgnoreCase(Constants.ACTION_HANDLE_INTENT)) {
-
           String bootTag = intent.getStringExtra(Constants.BOOT_TAG);
+          String ringtoneTitle = intent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE);
           int time = intent.getIntExtra(Constants.EXTRA_RAW_TIME, 0);
 
-          String ringtoneTitle = intent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE);
           if (ringtoneTitle.equalsIgnoreCase(Constants.NO_RINGTONE)) {
             Uri alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
             activeRingtone = RingtoneManager.getRingtone(context, alarmUri);
@@ -593,9 +588,9 @@ PuzzleFragment.OnPuzzleListener {
   @Override
   protected void onStart() {
     super.onStart();
-      mAlarmReceiver = new AlarmReceiver(1);
-      IntentFilter filter = new IntentFilter(Constants.ACTION_HANDLE_INTENT);
-      LocalBroadcastManager.getInstance(this).registerReceiver(myReceiver, filter);
+    mAlarmReceiver = new AlarmReceiver(1);
+    IntentFilter filter = new IntentFilter(Constants.ACTION_HANDLE_INTENT);
+    LocalBroadcastManager.getInstance(this).registerReceiver(myReceiver, filter);
   }
 
   @Override
@@ -616,11 +611,8 @@ PuzzleFragment.OnPuzzleListener {
 
   @Override
   public void onSaveInstanceState(Bundle outState) {
-    String ringtoneTitle;
-    if (activeRingtone == null) {
-      ringtoneTitle = null;
-    } else  {
-      ringtoneTitle = activeRingtone.getTitle(this);
+    String ringtoneTitle = activeRingtone == null ? null : activeRingtone.getTitle(this);
+    if (activeRingtone != null) {
       activeRingtone.stop();
       activeRingtone = null;
     }

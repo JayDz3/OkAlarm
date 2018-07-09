@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 
 public class AlarmReceiver extends BroadcastReceiver {
+
   private static int isActivated = 0;
 
   public AlarmReceiver() {}
@@ -44,7 +45,6 @@ public class AlarmReceiver extends BroadcastReceiver {
         onStartService(context, sendIntent);
       }
     }
-
   }
 
    public void onStartService(Context context, Intent inboundIntent) {

@@ -39,25 +39,27 @@ public class AlarmNotification extends BroadcastReceiver {
   }
 
   public void createNotificationChannel(Context context, Intent receivedIntent) {
-    int importance = NotificationManager.IMPORTANCE_DEFAULT;
-    NotificationChannel channel = new NotificationChannel(Constants.NOTIFICATION_CHANNEL_ID, Constants.NOTIFICATION_CLASS_TAG, importance);
-    channel.setDescription(Constants.NOTIFICATION_DESCRIPTION);
+    String ringtoneTitle = receivedIntent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE);
+    String replyLabel = context.getResources().getString(R.string.reply_label);
+    int rawTime = receivedIntent.getIntExtra(Constants.EXTRA_RAW_TIME, 0);
+    int notificationId = 1;
+
+    NotificationManagerCompat notificationManagerCompat = NotificationManagerCompat.from(context.getApplicationContext());
     NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
+    NotificationChannel channel = new NotificationChannel(Constants.NOTIFICATION_CHANNEL_ID, Constants.NOTIFICATION_CLASS_TAG, NotificationManager.IMPORTANCE_DEFAULT);
+
+    channel.setDescription(Constants.NOTIFICATION_DESCRIPTION);
     notificationManager.createNotificationChannel(channel);
 
-    String ringtoneTitle = receivedIntent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE);
-    int rawTime = receivedIntent.getIntExtra(Constants.EXTRA_RAW_TIME, 0);
+    RemoteInput remoteInput = new RemoteInput.Builder(Constants.NOTIFICATION_KEY_TEXT_REPLY)
+    .setLabel(replyLabel)
+    .build();
 
     Intent intent = new Intent(context.getApplicationContext(), MainActivity.class);
     intent.putExtra(Constants.BOOT_TAG, Constants.NOTIFICATION_CLASS_TAG);
     intent.putExtra(Constants.EXTRA_RINGTONE_TITLE, ringtoneTitle);
     intent.putExtra(Constants.EXTRA_RAW_TIME, rawTime);
     intent.setFlags(Constants.FLAG_NEW_TASK| Constants.FLAG_CLEAR_TASK);
-
-    String replyLabel = context.getResources().getString(R.string.reply_label);
-    RemoteInput remoteInput = new RemoteInput.Builder(Constants.NOTIFICATION_KEY_TEXT_REPLY)
-    .setLabel(replyLabel)
-    .build();
 
     PendingIntent pendingIntent = PendingIntent.getActivity(context.getApplicationContext(), Constants.NOTIFICATION_ALARM_REQUEST_CODE, intent, Constants.FLAG_UPDATE_CURRENT);
 
@@ -66,24 +68,17 @@ public class AlarmNotification extends BroadcastReceiver {
     .build();
 
     Uri alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-    String _title = "UH OH!";
-    String _content = "Your Mom ditched you again!";
+    String _title = "Good Morning!";
+    String _content = "What day is it?";
     Notification notification = getNotificationAction(context, alarmSound, _title, _content, action);
-    NotificationManagerCompat manager = NotificationManagerCompat.from(context.getApplicationContext());
 
-    int id = 1;
-    NotificationManager m = (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
-    if (m != null) {
-      StatusBarNotification[] notifications = m.getActiveNotifications();
-      for (StatusBarNotification n : notifications) {
-        if (n.getNotification().getChannelId().equalsIgnoreCase(Constants.NOTIFICATION_CHANNEL_ID)) {
-          if (n.getId() == id) {
-            id += 1;
-          }
-        }
+    StatusBarNotification[] notifications = notificationManager.getActiveNotifications();
+    for (StatusBarNotification statusBarNotification : notifications) {
+      if (statusBarNotification.getNotification().getChannelId().equalsIgnoreCase(Constants.NOTIFICATION_CHANNEL_ID) && statusBarNotification.getId() == notificationId) {
+        notificationId += 1;
       }
     }
-    manager.notify(id, notification);
+    notificationManagerCompat.notify(notificationId, notification);
   }
 
   public Notification getNotificationAction(Context context, Uri alarmSound, String _title, String _content, NotificationCompat.Action action) {
