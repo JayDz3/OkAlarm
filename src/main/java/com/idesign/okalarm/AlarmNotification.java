@@ -10,6 +10,7 @@ import android.content.Intent;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.service.notification.StatusBarNotification;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.support.v4.app.RemoteInput;
@@ -65,12 +66,24 @@ public class AlarmNotification extends BroadcastReceiver {
     .build();
 
     Uri alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-    String _title = "Good Morning!";
-    String _content = "What day is it?";
+    String _title = "UH OH!";
+    String _content = "Your Mom ditched you again!";
     Notification notification = getNotificationAction(context, alarmSound, _title, _content, action);
-
     NotificationManagerCompat manager = NotificationManagerCompat.from(context.getApplicationContext());
-    manager.notify(Constants.NOTIFICATION_ALARM_REQUEST_CODE, notification);
+
+    int id = 1;
+    NotificationManager m = (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
+    if (m != null) {
+      StatusBarNotification[] notifications = m.getActiveNotifications();
+      for (StatusBarNotification n : notifications) {
+        if (n.getNotification().getChannelId().equalsIgnoreCase(Constants.NOTIFICATION_CHANNEL_ID)) {
+          if (n.getId() == id) {
+            id += 1;
+          }
+        }
+      }
+    }
+    manager.notify(id, notification);
   }
 
   public Notification getNotificationAction(Context context, Uri alarmSound, String _title, String _content, NotificationCompat.Action action) {

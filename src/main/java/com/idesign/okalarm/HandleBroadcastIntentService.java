@@ -25,5 +25,4 @@ public class HandleBroadcastIntentService extends IntentService {
     outIntent.putExtra(Constants.EXTRA_RAW_TIME, time);
     LocalBroadcastManager.getInstance(getBaseContext()).sendBroadcast(outIntent);
   }
-
 }

@@ -4,23 +4,26 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.app.AlarmManager;
 
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.RemoteInput;
 import android.arch.lifecycle.Observer;
 import android.arch.lifecycle.ViewModelProviders;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
+import android.service.notification.StatusBarNotification;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
-import android.support.v4.app.NotificationManagerCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -29,6 +32,7 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.view.ViewPropertyAnimator;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.idesign.okalarm.Interfaces.AlarmItemListener;
@@ -62,6 +66,8 @@ PuzzleFragment.OnPuzzleListener {
   private List<FormattedTime> formattedTimes;
   private FormattedTimesViewModel viewModel;
 
+  TextView warningView;
+
   public static final String EXTRA_FRAGMENT_INT = "extra.fragment.integer";
   public static final String EXTRA_HOUR = "extra.hour";
   public static final String EXTRA_MINUTE = "extra.minute";
@@ -83,6 +89,8 @@ PuzzleFragment.OnPuzzleListener {
 
     Intent getIntent = getIntent();
     recyclerView = findViewById(R.id.main_recycler_view);
+    warningView = findViewById(R.id.main_empty_alarm_view);
+
     fab = findViewById(R.id.main_fab);
     fab.setOnClickListener(l -> setFragment());
 
@@ -111,6 +119,7 @@ PuzzleFragment.OnPuzzleListener {
     final Observer<List<FormattedTime>> itemObserver = items -> MainActivity.this.setViewModel(adapter, items);
     viewModel.getItems().observe(this, itemObserver);
 
+    warningView.setVisibility(View.GONE);
     if (savedInstanceState != null) {
       getValuesFromBundle(savedInstanceState);
 
@@ -121,7 +130,10 @@ PuzzleFragment.OnPuzzleListener {
       toggleView();
 
     } else {
-
+      StatusBarNotification[] notifications = getNotifications();
+      if (notifications.length > 0) {
+        showToast("Active notifications");
+      }
       CharSequence message = getMessageText(getIntent);
       String _message = (String) message;
       String answer = "saturday";
@@ -130,6 +142,7 @@ PuzzleFragment.OnPuzzleListener {
         toggleView();
       }
     }
+    disableNotificationService();
   }
 
   private CharSequence getMessageText(Intent intent) {
@@ -173,10 +186,32 @@ PuzzleFragment.OnPuzzleListener {
   }
 
   public void broadcastCloseNotificationTray() {
-    NotificationManagerCompat manager = NotificationManagerCompat.from(this);
-    manager.cancel(Constants.NOTIFICATION_ALARM_REQUEST_CODE);
+    NotificationManager notificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
+    StatusBarNotification[] notifications = getNotifications();
+    if (notificationManager != null) {
+      for (StatusBarNotification notification : notifications) {
+        if (notification.getNotification().getChannelId().equalsIgnoreCase(Constants.NOTIFICATION_CHANNEL_ID)) {
+           notificationManager.cancel(notification.getId());
+        }
+      }
+    }
     Intent closeIntent = new Intent(Constants.ACTION_CLOSE_DIALOGS);
     sendBroadcast(closeIntent);
+  }
+
+  public StatusBarNotification[] getNotifications() {
+    NotificationManager notificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
+    if (notificationManager != null && notificationManager.getActiveNotifications() != null) {
+      return notificationManager.getActiveNotifications();
+    } else {
+      return new StatusBarNotification[0];
+    }
+  }
+
+  public void disableNotificationService() {
+    ComponentName receiver = new ComponentName(this, AlarmNotification.class);
+    PackageManager packageManager = this.getPackageManager();
+    packageManager.setComponentEnabledSetting(receiver, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
   }
 
   public void showToast(CharSequence message) {
@@ -203,6 +238,11 @@ PuzzleFragment.OnPuzzleListener {
     if (newTimes != null) {
       formattedTimes = newTimes;
       adapter.setList(formattedTimes);
+      if (formattedTimes.size() == 0 && mFragment_int == -1) {
+        warningView.setVisibility(View.VISIBLE);
+      } else {
+        warningView.setVisibility(View.GONE);
+      }
     }
   }
   /*=======================================*
@@ -251,6 +291,7 @@ PuzzleFragment.OnPuzzleListener {
         _am_pm = am_pm;
         _rawtime = millis;
         attachFragment(puzzleFragment);
+        warningView.setVisibility(View.GONE);
       }
     };
   }
@@ -266,6 +307,7 @@ PuzzleFragment.OnPuzzleListener {
         recyclerView.setVisibility(View.GONE);
         fab.setVisibility(View.GONE);
         attachFragment(newFragment);
+        warningView.setVisibility(View.GONE);
       }
     };
   }
@@ -306,6 +348,11 @@ PuzzleFragment.OnPuzzleListener {
         super.onAnimationEnd(animation);
         recyclerView.setVisibility(View.VISIBLE);
         fab.setVisibility(View.VISIBLE);
+        if (formattedTimes!= null && formattedTimes.size() > 0) {
+          warningView.setVisibility(View.GONE);
+        } else {
+          warningView.setVisibility(View.VISIBLE);
+        }
       }
     });
   }
@@ -324,27 +371,25 @@ PuzzleFragment.OnPuzzleListener {
       calendar.setTimeInMillis(calMilliseconds);
     }
 
-    if (times.contains(calendar.getTimeInMillis())) {
+    if (!times.contains(calendar.getTimeInMillis())) {
+      times.add(calendar.getTimeInMillis());
+      int baseHour = am_pm.equals("AM") ? calendar.get(Calendar.HOUR_OF_DAY) : calendar.get(Calendar.HOUR);
+      int hour = getHourByInteger(baseHour);
+      int _monthInt = calendar.get(Calendar.MONTH);
+      String _month = getMonth(_monthInt);
+      String _date = String.valueOf(calendar.get(Calendar.DAY_OF_MONTH));
+      String _combined = _month + " " + _date;
+      String _title = ringtone == null ? null : ringtone.getTitle(this);
+
+      FormattedTime formattedTime = new FormattedTime(calendar.getTimeInMillis(), hour, calendar.get(Calendar.MINUTE), am_pm, _combined, true, false, _title);
+      _rawtime = formattedTime.get_rawTime();
+      addNewItem(formattedTime);
+      startIntent(formattedTime);
+      if (alarmManager != null) {
+        alarmManager.set(AlarmManager.RTC_WAKEUP, formattedTime.get_rawTime(), pendingIntent);
+      }
       showRecyclerView();
-      return;
     }
-    times.add(calendar.getTimeInMillis());
-    int baseHour = am_pm.equals("AM") ? calendar.get(Calendar.HOUR_OF_DAY) : calendar.get(Calendar.HOUR);
-    int hour = getHourByInteger(baseHour);
-    int _monthInt = calendar.get(Calendar.MONTH);
-    String _month = getMonth(_monthInt);
-    String _date = String.valueOf(calendar.get(Calendar.DAY_OF_MONTH));
-    String _combined = _month + " " + _date;
-    String _title = ringtone == null ? null : ringtone.getTitle(this);
-
-    FormattedTime formattedTime = new FormattedTime(calendar.getTimeInMillis(), hour, calendar.get(Calendar.MINUTE), am_pm, _combined, true, false, _title);
-    _rawtime = formattedTime.get_rawTime();
-    addNewItem(formattedTime);
-    startIntent(formattedTime);
-    if (alarmManager != null) {
-      alarmManager.set(AlarmManager.RTC_WAKEUP, formattedTime.get_rawTime(), pendingIntent);
-    }
-
   }
 
   public void setCalendarValues(Calendar calendar, int hourOfDay, int minute) {
@@ -450,6 +495,10 @@ PuzzleFragment.OnPuzzleListener {
   public void cancelIntent(FormattedTime formattedTime) {
     int time = (int) formattedTime.get_rawTime();
     intent = new Intent(this, AlarmReceiver.class);
+    intent.putExtra(Constants.EXTRA_RINGTONE_TITLE, formattedTime.get_title());
+    intent.putExtra(Constants.EXTRA_RAW_TIME, time);
+    intent.putExtra(Constants.BOOT_TAG, Constants.ALARM_CLASS_TAG);
+    intent.setAction(Constants.ACTION_MANAGE_ALARM);
     pendingIntent = PendingIntent.getBroadcast(this, time, intent, 0);
   }
 
