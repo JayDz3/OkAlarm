@@ -76,6 +76,10 @@ PuzzleFragment.OnPuzzleListener {
   private String _am_pm;
   private long _rawtime;
   boolean _isCorrect = false;
+  private Uri _activeUri;
+
+  private List<Uri> uris;
+  RingtoneManager ringtoneManager;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -91,7 +95,7 @@ PuzzleFragment.OnPuzzleListener {
     formattedTimes = new ArrayList<>();
     times = new ArrayList<>();
     mRingtones = new ArrayList<>();
-
+    uris = new ArrayList<>();
     alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
 
     adapter = new FormattedTimesAdapter(formattedTimes, MainActivity.this);
@@ -100,10 +104,12 @@ PuzzleFragment.OnPuzzleListener {
     recyclerView.addItemDecoration(itemDecoration);
     recyclerView.setAdapter(adapter);
 
-    RingtoneManager ringtoneManager = new RingtoneManager(MainActivity.this);
+    ringtoneManager = new RingtoneManager(MainActivity.this);
     Cursor cursor = ringtoneManager.getCursor();
     while (cursor.moveToNext()) {
       int currentPos = cursor.getPosition();
+      Uri uri = ringtoneManager.getRingtoneUri(currentPos);
+      uris.add(uri);
       mRingtones.add(ringtoneManager.getRingtone(currentPos));
     }
 
@@ -113,20 +119,34 @@ PuzzleFragment.OnPuzzleListener {
 
     if (savedInstanceState != null) {
       getValuesFromBundle(savedInstanceState);
-      if (alarmIsActive()) {
+      if (alarmIsActive(_activeUri)) {
         goToPuzzleFragment();
         return;
       }
       toggleView();
     } else {
-      StatusBarNotification[] notifications = getNotifications();
-      if (notifications.length > 0) {
-        showToast("Active notifications");
-      }
       String _message = (String) getMessageText(getIntent);
+      String itemUri = getIntent.getStringExtra(Constants.EXTRA_URI);
       String answer = "saturday";
-      boolean doReturn = screenMessage(_message, answer);
-      if (!doReturn) {
+      boolean doReturn = screenMessage(_message, answer, itemUri);
+      boolean isActiveMessage = false;
+      StatusBarNotification[] notifications = getNotifications();
+      List<StatusBarNotification> appNotifications = new ArrayList<>();
+      if (notifications.length > 0) {
+        for (StatusBarNotification notification : notifications) {
+          if (notification.getNotification().getChannelId().equalsIgnoreCase(Constants.NOTIFICATION_CHANNEL_ID)) {
+           isActiveMessage = true;
+           appNotifications.add(notification);
+          }
+        }
+      }
+      if (isActiveMessage) {
+        Bundle extras = appNotifications.get(0).getNotification().extras;
+        String messageUri = extras.getString(Constants.EXTRA_URI);
+        startRingtoneService(this, messageUri);
+        goToPuzzleFragment();
+      }
+      if (!doReturn && !isActiveMessage) {
         toggleView();
       }
     }
@@ -139,24 +159,24 @@ PuzzleFragment.OnPuzzleListener {
       if (intent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE) != null) {
         String ringtoneTitle = intent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE);
         int rawTime = intent.getIntExtra(Constants.EXTRA_RAW_TIME, 0);
-
-        if (ringtoneTitle.equalsIgnoreCase(Constants.NO_RINGTONE)) {
-          Uri alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
-          activeRingtone = RingtoneManager.getRingtone(this, alarmUri);
-        } else {
-          activeRingtone = findRingtoneByTitle(ringtoneTitle);
-        }
+        String itemUri = intent.getStringExtra(Constants.EXTRA_URI);
+        activeRingtone = RingtoneManager.getRingtone(this, Uri.parse(itemUri));
       }
     }
 
     Bundle remoteInput = RemoteInput.getResultsFromIntent(intent);
     if (remoteInput != null) {
-       return remoteInput.getCharSequence(KEY_TEXT_REPLY);
+      return remoteInput.getCharSequence(KEY_TEXT_REPLY);
     }
     return null;
   }
 
-  public boolean screenMessage(String message, String answer) {
+  public Uri getUri(Ringtone ringtone) {
+    int idx = mRingtones.indexOf(ringtone);
+    return uris.get(idx);
+  }
+
+  public boolean screenMessage(String message, String answer, String itemUri) {
     if (message != null) {
       if (message.equalsIgnoreCase(answer)) {
         _isCorrect = true;
@@ -165,6 +185,11 @@ PuzzleFragment.OnPuzzleListener {
         showToast("Sorry, wrong day");
       }
       broadcastCloseNotificationTray();
+      if (itemUri != null) {
+        if (!alarmIsActive(Uri.parse(itemUri))) {
+          startRingtoneService(this, itemUri);
+        }
+      }
       goToPuzzleFragment();
       return true;
     }
@@ -177,7 +202,7 @@ PuzzleFragment.OnPuzzleListener {
     if (notificationManager != null) {
       for (StatusBarNotification notification : notifications) {
         if (notification.getNotification().getChannelId().equalsIgnoreCase(Constants.NOTIFICATION_CHANNEL_ID)) {
-           notificationManager.cancel(notification.getId());
+          notificationManager.cancel(notification.getId());
         }
       }
     }
@@ -242,7 +267,7 @@ PuzzleFragment.OnPuzzleListener {
    *  Alarm has gone off, attach Puzzle Fragment   *
    *===============================================*/
   public void setFragment(int hourOfDay, int minute, String am_pm, long millis) {
-    activeRingtone.play();
+    // activeRingtone.play();
     if (puzzleFragment != null && puzzleFragment.isVisible()) {
       return;
     }
@@ -352,15 +377,14 @@ PuzzleFragment.OnPuzzleListener {
       String _month = getMonth(_monthInt);
       String _date = String.valueOf(calendar.get(Calendar.DAY_OF_MONTH));
       String _combined = _month + " " + _date;
-      String _title = ringtone == null ? null : ringtone.getTitle(this);
 
-      FormattedTime formattedTime = new FormattedTime(calendar.getTimeInMillis(), hour, calendar.get(Calendar.MINUTE), am_pm, _combined, true, false, _title);
+      String _title = ringtone == null ? null : ringtone.getTitle(this);
+      Uri itemUri = ringtone == null ? RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM) : getUri(ringtone);
+
+      FormattedTime formattedTime = new FormattedTime(calendar.getTimeInMillis(), hour, calendar.get(Calendar.MINUTE), am_pm, _combined, true, false, _title, itemUri.toString());
       _rawtime = formattedTime.get_rawTime();
       addNewItem(formattedTime);
       startIntent(formattedTime);
-      if (alarmManager != null) {
-        alarmManager.set(AlarmManager.RTC_WAKEUP, formattedTime.get_rawTime(), pendingIntent);
-      }
       showRecyclerView();
     }
   }
@@ -373,11 +397,7 @@ PuzzleFragment.OnPuzzleListener {
   }
 
   public int getHourByInteger(int hourOfDay) {
-    if (hourOfDay == 0) {
-      return 12;
-    } else {
-      return hourOfDay;
-    }
+    return hourOfDay == 0 ? 12 : hourOfDay;
   }
 
   /*================================================*
@@ -444,44 +464,29 @@ PuzzleFragment.OnPuzzleListener {
    *  Set new Alarm intent *
    *=======================*/
   public void startIntent(FormattedTime formattedTime) {
-    int time = (int) formattedTime.get_rawTime();
-    intent = new Intent(this, AlarmReceiver.class);
-    intent.putExtra(Constants.EXTRA_RINGTONE_TITLE, formattedTime.get_title());
-    intent.putExtra(Constants.EXTRA_RAW_TIME, time);
-    intent.putExtra(Constants.BOOT_TAG, Constants.ALARM_CLASS_TAG);
-    intent.setAction(Constants.ACTION_MANAGE_ALARM);
-    pendingIntent = PendingIntent.getBroadcast(this, time, intent, 0);
-  }
-
-  public Ringtone findRingtoneByTitle(String title) {
-    Ringtone ringtone = null;
-    boolean isFound = false;
-    for (Ringtone tone : mRingtones) {
-      if (!isFound && tone.getTitle(this).equals(title)) {
-        isFound = true;
-        ringtone = tone;
-      }
-    }
-    return ringtone;
+    populateAlarmIntent(formattedTime);
+    alarmManager.set(AlarmManager.RTC_WAKEUP, formattedTime.get_rawTime(), pendingIntent);
   }
 
   public void cancelIntent(FormattedTime formattedTime) {
+    populateAlarmIntent(formattedTime);
+    alarmManager.cancel(pendingIntent);
+  }
+
+  public void populateAlarmIntent(FormattedTime formattedTime) {
     int time = (int) formattedTime.get_rawTime();
     intent = new Intent(this, AlarmReceiver.class);
     intent.putExtra(Constants.EXTRA_RINGTONE_TITLE, formattedTime.get_title());
     intent.putExtra(Constants.EXTRA_RAW_TIME, time);
     intent.putExtra(Constants.BOOT_TAG, Constants.ALARM_CLASS_TAG);
+    intent.putExtra(Constants.EXTRA_URI, formattedTime.get_itemUri());
     intent.setAction(Constants.ACTION_MANAGE_ALARM);
     pendingIntent = PendingIntent.getBroadcast(this, time, intent, 0);
-    if (alarmManager != null) {
-      alarmManager.cancel(pendingIntent);
-    }
   }
 
   public void silenceAlarm() {
-    if (activeRingtone != null && activeRingtone.isPlaying()) {
-      activeRingtone.stop();
-    }
+    Intent i = new Intent(this, RingtoneService.class);
+    this.stopService(i);
   }
 
   /*================================================*
@@ -509,12 +514,15 @@ PuzzleFragment.OnPuzzleListener {
       cancelIntent(formattedTime);
     } else {
       startIntent(formattedTime);
-      alarmManager.set(AlarmManager.RTC_WAKEUP, formattedTime.get_rawTime(), pendingIntent);
     }
   }
 
-  public boolean alarmIsActive() {
-    return activeRingtone != null && activeRingtone.isPlaying();
+  public boolean alarmIsActive(Uri activeUri) {
+    if (activeUri != null) {
+      Ringtone ringtone = RingtoneManager.getRingtone(this, Uri.parse(activeUri.toString()));
+      return ringtone.isPlaying();
+    }
+    return false;
   }
 
 
@@ -544,19 +552,21 @@ PuzzleFragment.OnPuzzleListener {
         if (intent.getAction() != null && intent.getAction().equalsIgnoreCase(Constants.ACTION_HANDLE_INTENT)) {
           String bootTag = intent.getStringExtra(Constants.BOOT_TAG);
           String ringtoneTitle = intent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE);
+          String itemUri = intent.getStringExtra(Constants.EXTRA_URI);
           int time = intent.getIntExtra(Constants.EXTRA_RAW_TIME, 0);
-
-          if (ringtoneTitle.equalsIgnoreCase(Constants.NO_RINGTONE)) {
-            Uri alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
-            activeRingtone = RingtoneManager.getRingtone(context, alarmUri);
-          } else {
-            activeRingtone = findRingtoneByTitle(ringtoneTitle);
-          }
+          activeRingtone = RingtoneManager.getRingtone(context, Uri.parse(itemUri));
+          _activeUri = Uri.parse(itemUri);
           goToPuzzleFragment();
         }
       }
     }
   };
+
+  public void startRingtoneService(Context context, String itemUri) {
+    Intent ringtoneIntent = new Intent(context, RingtoneService.class);
+    ringtoneIntent.putExtra(Constants.EXTRA_URI, itemUri);
+    context.startService(ringtoneIntent);
+  }
 
   @Override
   protected void onStart() {
@@ -585,16 +595,14 @@ PuzzleFragment.OnPuzzleListener {
   @Override
   public void onSaveInstanceState(Bundle outState) {
     String ringtoneTitle = activeRingtone == null ? null : activeRingtone.getTitle(this);
-    if (activeRingtone != null) {
-      activeRingtone.stop();
-      activeRingtone = null;
-    }
+    String itemUri = _activeUri == null ? null : _activeUri.toString();
     outState.putInt(EXTRA_FRAGMENT_INT, mFragment_int);
     outState.putInt(EXTRA_HOUR, _hour);
     outState.putInt(EXTRA_MINUTE, _minute);
     outState.putString(EXTRA_AM_PM, _am_pm);
     outState.putLong(EXTRA_RAW_TIME, _rawtime);
     outState.putString(EXTRA_RINGTONE_TITLE, ringtoneTitle);
+    outState.putString(Constants.EXTRA_URI, itemUri);
     super.onSaveInstanceState(outState);
   }
 
@@ -605,10 +613,8 @@ PuzzleFragment.OnPuzzleListener {
       _minute = savedInstanceState.getInt(EXTRA_MINUTE);
       _am_pm = savedInstanceState.getString(EXTRA_AM_PM);
       _rawtime = savedInstanceState.getLong(EXTRA_RAW_TIME);
-      String ringtoneTitle = savedInstanceState.getString(EXTRA_RINGTONE_TITLE);
-      if (ringtoneTitle != null) {
-        activeRingtone = findRingtoneByTitle(ringtoneTitle);
-      }
+      String itemUri = savedInstanceState.getString(Constants.EXTRA_URI);
+      _activeUri = itemUri == null ? null : Uri.parse(itemUri);
     }
   }
 

@@ -1,6 +1,9 @@
 package com.idesign.okalarm;
 
 import android.content.Context;
+import android.media.Ringtone;
+import android.media.RingtoneManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
@@ -37,8 +40,11 @@ public class PuzzleFragment extends Fragment {
   public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
     super.onViewCreated(view, savedInstanceState);
     submitButton = view.findViewById(R.id.puzzle_submit_answer);
-    submitButton.setOnClickListener(l -> mListener.onAnswer(2));
+    submitButton.setOnClickListener(l -> stopRingtone());
+  }
 
+  public void stopRingtone() {
+    mListener.onAnswer(2);
   }
 
   @Override

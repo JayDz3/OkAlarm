@@ -18,13 +18,14 @@
             </intent-filter>
         </activity>
 
-        <receiver android:name="com.idesign.okalarm.AlarmReceiver">
+        <receiver android:name="com.idesign.okalarm.AlarmReceiver" android:exported="false">
         </receiver>
 
-        <receiver android:name="com.idesign.okalarm.AlarmNotification" android:process=":remote">
+        <receiver android:name="com.idesign.okalarm.AlarmNotification" android:process=":remote" android:exported="false">
         </receiver>
 
         <service android:name=".HandleBroadcastIntentService" />
+        <service android:name=".RingtoneService"  android:exported="false"/>
     </application>
 
 </manifest>

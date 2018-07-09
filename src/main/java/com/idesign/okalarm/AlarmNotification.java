@@ -40,6 +40,7 @@ public class AlarmNotification extends BroadcastReceiver {
 
   public void createNotificationChannel(Context context, Intent receivedIntent) {
     String ringtoneTitle = receivedIntent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE);
+    String itemUri = receivedIntent.getStringExtra(Constants.EXTRA_URI);
     String replyLabel = context.getResources().getString(R.string.reply_label);
     int rawTime = receivedIntent.getIntExtra(Constants.EXTRA_RAW_TIME, 0);
     int notificationId = 1;
@@ -58,6 +59,7 @@ public class AlarmNotification extends BroadcastReceiver {
     Intent intent = new Intent(context.getApplicationContext(), MainActivity.class);
     intent.putExtra(Constants.BOOT_TAG, Constants.NOTIFICATION_CLASS_TAG);
     intent.putExtra(Constants.EXTRA_RINGTONE_TITLE, ringtoneTitle);
+    intent.putExtra(Constants.EXTRA_URI, itemUri);
     intent.putExtra(Constants.EXTRA_RAW_TIME, rawTime);
     intent.setFlags(Constants.FLAG_NEW_TASK| Constants.FLAG_CLEAR_TASK);
 
@@ -70,7 +72,9 @@ public class AlarmNotification extends BroadcastReceiver {
     Uri alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
     String _title = "Good Morning!";
     String _content = "What day is it?";
-    Notification notification = getNotificationAction(context, alarmSound, _title, _content, action);
+    Bundle extras = new Bundle();
+    extras.putString(Constants.EXTRA_URI, itemUri);
+    Notification notification = getNotificationAction(context, alarmSound, _title, _content, action, extras);
 
     StatusBarNotification[] notifications = notificationManager.getActiveNotifications();
     for (StatusBarNotification statusBarNotification : notifications) {
@@ -78,14 +82,16 @@ public class AlarmNotification extends BroadcastReceiver {
         notificationId += 1;
       }
     }
+
     notificationManagerCompat.notify(notificationId, notification);
   }
 
-  public Notification getNotificationAction(Context context, Uri alarmSound, String _title, String _content, NotificationCompat.Action action) {
+  public Notification getNotificationAction(Context context, Uri alarmSound, String _title, String _content, NotificationCompat.Action action, Bundle bundle) {
     return new NotificationCompat.Builder(context.getApplicationContext(), Constants.NOTIFICATION_CHANNEL_ID)
     .setContentTitle(_title)
     .setContentText(_content)
     .setSound(alarmSound)
+    .setExtras(bundle)
     .setSmallIcon(R.mipmap.ic_launcher_round)
     .setPriority(NotificationCompat.PRIORITY_DEFAULT)
     .addAction(action).build();

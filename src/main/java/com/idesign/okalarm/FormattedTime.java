@@ -9,8 +9,9 @@ public class FormattedTime {
   private boolean _isActive;
   private boolean _hasPlayed;
   private String _title;
+  private String _itemUri;
 
-  FormattedTime(long _rawTime, int _hour, int _minute, String _am_pm, String _date, boolean _isActive, boolean _hasPlayed, String _title) {
+  FormattedTime(long _rawTime, int _hour, int _minute, String _am_pm, String _date, boolean _isActive, boolean _hasPlayed, String _title, String _itemUri) {
     this._rawTime = _rawTime;
     this._hour = _hour;
     this._minute = _minute;
@@ -19,6 +20,7 @@ public class FormattedTime {
     this._isActive = _isActive;
     this._hasPlayed = _hasPlayed;
     this._title = _title;
+    this._itemUri = _itemUri;
   }
 
   public void set_rawTime(long _rawTime) {
@@ -46,6 +48,8 @@ public class FormattedTime {
   public void set_hasPlayed(boolean _hasPlayed) { this._hasPlayed = _hasPlayed; }
 
   public void set_title(String _title) { this._title = _title; }
+
+  public void set_itemUri(String _itemUri) { this._itemUri = _itemUri; }
 
   public long get_rawTime() {
     return _rawTime;
@@ -75,5 +79,9 @@ public class FormattedTime {
 
   public String get_title() {
     return _title;
+  }
+
+  public String get_itemUri() {
+    return _itemUri;
   }
 }

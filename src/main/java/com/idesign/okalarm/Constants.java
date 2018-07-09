@@ -34,6 +34,7 @@ public class Constants {
 
   public static final String EXTRA_RINGTONE_TITLE = "ringtone.title";
   public static final String EXTRA_RAW_TIME = "raw.time";
+  public static final String EXTRA_URI = "extra.uri";
 
   public static final String NO_RINGTONE = "None";
 
