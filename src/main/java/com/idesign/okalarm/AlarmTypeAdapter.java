@@ -65,7 +65,6 @@ public class AlarmTypeAdapter extends RecyclerView.Adapter<AlarmTypeAdapter.Alar
     }
     currentSelectedView = viewHolder;
     viewHolder.itemView.setBackgroundColor(context.getColor(R.color.colorLightGray));
-
   }
 
   public interface OnAlarmTypeListener {

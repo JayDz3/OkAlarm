@@ -72,13 +72,10 @@ public class PuzzleFragment extends Fragment {
   @Override
   public void onAttach(Context context) {
     super.onAttach(context);
-    if (context instanceof OnPuzzleListener) {
-      if (mListener == null) {
-        mListener = (OnPuzzleListener) context;
-      }
-    } else {
-      throw new RuntimeException(context.toString()
-      + " must implement OnFragmentInteractionListener");
+    try {
+      mListener = (OnPuzzleListener) context;
+    } catch (ClassCastException e) {
+      throw new ClassCastException(context.toString() + " Must implement OnPuzzleListener");
     }
   }
 

@@ -22,8 +22,6 @@ import android.net.Uri;
 import android.service.notification.StatusBarNotification;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentTransaction;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -32,10 +30,10 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.view.ViewPropertyAnimator;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.idesign.okalarm.Interfaces.AlarmItemListener;
+import com.idesign.okalarm.ViewModels.FormattedTimesViewModel;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -45,7 +43,6 @@ public class MainActivity extends AppCompatActivity implements AlarmFragment.OnA
 AlarmItemListener,
 PuzzleFragment.OnPuzzleListener {
 
-  FragmentManager mFragmentManager;
   AlarmFragment newFragment;
   PuzzleFragment puzzleFragment;
   FloatingActionButton fab;
@@ -65,8 +62,6 @@ PuzzleFragment.OnPuzzleListener {
   private List<Long> times;
   private List<FormattedTime> formattedTimes;
   private FormattedTimesViewModel viewModel;
-
-  TextView warningView;
 
   public static final String EXTRA_FRAGMENT_INT = "extra.fragment.integer";
   public static final String EXTRA_HOUR = "extra.hour";
@@ -89,7 +84,6 @@ PuzzleFragment.OnPuzzleListener {
 
     Intent getIntent = getIntent();
     recyclerView = findViewById(R.id.main_recycler_view);
-    warningView = findViewById(R.id.main_empty_alarm_view);
 
     fab = findViewById(R.id.main_fab);
     fab.setOnClickListener(l -> setFragment());
@@ -99,7 +93,6 @@ PuzzleFragment.OnPuzzleListener {
     mRingtones = new ArrayList<>();
 
     alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-    mFragmentManager = getSupportFragmentManager();
 
     adapter = new FormattedTimesAdapter(formattedTimes, MainActivity.this);
     DividerItemDecoration itemDecoration = new DividerItemDecoration(recyclerView.getContext(), DividerItemDecoration.VERTICAL);
@@ -117,8 +110,6 @@ PuzzleFragment.OnPuzzleListener {
     viewModel = ViewModelProviders.of(this).get(FormattedTimesViewModel.class);
     final Observer<List<FormattedTime>> itemObserver = items -> MainActivity.this.setViewModel(adapter, items);
     viewModel.getItems().observe(this, itemObserver);
-
-    warningView.setVisibility(View.GONE);
 
     if (savedInstanceState != null) {
       getValuesFromBundle(savedInstanceState);
@@ -233,11 +224,6 @@ PuzzleFragment.OnPuzzleListener {
     if (newTimes != null) {
       formattedTimes = newTimes;
       adapter.setList(formattedTimes);
-      if (formattedTimes.size() == 0 && mFragment_int == -1) {
-        warningView.setVisibility(View.VISIBLE);
-      } else {
-        warningView.setVisibility(View.GONE);
-      }
     }
   }
   /*=======================================*
@@ -280,7 +266,6 @@ PuzzleFragment.OnPuzzleListener {
         super.onAnimationEnd(animation);
         recyclerView.setVisibility(View.GONE);
         fab.setVisibility(View.GONE);
-        warningView.setVisibility(View.GONE);
         puzzleFragment = PuzzleFragment.newInstance(hourOfDay, minute, am_pm);
         _hour = hourOfDay;
         _minute = minute;
@@ -301,15 +286,13 @@ PuzzleFragment.OnPuzzleListener {
         newFragment = AlarmFragment.newInstance();
         recyclerView.setVisibility(View.GONE);
         fab.setVisibility(View.GONE);
-        warningView.setVisibility(View.GONE);
         attachFragment(newFragment);
       }
     };
   }
 
   public void attachFragment(Fragment fragment) {
-    mFragmentManager.beginTransaction()
-    .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN)
+    getSupportFragmentManager().beginTransaction()
     .replace(R.id.main_frame_layout, fragment).commit();
   }
 
@@ -334,7 +317,7 @@ PuzzleFragment.OnPuzzleListener {
   }
 
   public void detachFragment(Fragment fragment) {
-    mFragmentManager.beginTransaction()
+    getSupportFragmentManager().beginTransaction()
     .detach(fragment).commit();
     animator(recyclerView, 1.0f, 300)
     .setListener(new AnimatorListenerAdapter() {
@@ -343,11 +326,6 @@ PuzzleFragment.OnPuzzleListener {
         super.onAnimationEnd(animation);
         recyclerView.setVisibility(View.VISIBLE);
         fab.setVisibility(View.VISIBLE);
-        if (formattedTimes!= null && formattedTimes.size() > 0) {
-          warningView.setVisibility(View.GONE);
-        } else {
-          warningView.setVisibility(View.VISIBLE);
-        }
       }
     });
   }
@@ -516,11 +494,6 @@ PuzzleFragment.OnPuzzleListener {
     FormattedTime formattedTime = formattedTimes.get(position);
     cancelIntent(formattedTime);
     viewModel.setFormattedTimes(formattedTimes);
-    if (formattedTimes.size() == 1) {
-      warningView.setVisibility(View.VISIBLE);
-    } else {
-      warningView.setVisibility(View.GONE);
-    }
   }
 
   public void onReady() {
@@ -643,6 +616,11 @@ PuzzleFragment.OnPuzzleListener {
   public void onBackPressed() {
     if (puzzleFragment != null && puzzleFragment.isVisible()) {
       showRecyclerView();
+      return;
+    }
+    if (mFragment_int == 0) {
+      showRecyclerView();
+      silenceAlarm();
       return;
     }
     super.onBackPressed();

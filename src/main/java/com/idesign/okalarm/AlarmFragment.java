@@ -31,9 +31,9 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
   private int minute;
   private String am_pm;
 
- AlarmTypeAdapter alarmTypeAdapter;
- private List<Ringtone> ringtones;
- private Ringtone ringtone;
+  AlarmTypeAdapter alarmTypeAdapter;
+  private List<Ringtone> ringtones;
+  private Ringtone ringtone;
 
   private OnAlarmSet mListener;
 
@@ -106,13 +106,10 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
   @Override
   public void onAttach(Context context) {
     super.onAttach(context);
-    if (context instanceof OnAlarmSet) {
-      if (mListener == null) {
-        mListener = (OnAlarmSet) context;
-      }
-    } else {
-      throw new RuntimeException(context.toString()
-      + " must implement OnFragmentInteractionListener");
+    try {
+      mListener = (OnAlarmSet) context;
+    } catch (ClassCastException e) {
+      throw new ClassCastException(context.toString() + "Must implement OnAlarmSet");
     }
   }
 

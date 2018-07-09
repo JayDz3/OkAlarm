@@ -1,16 +1,26 @@
 <resources>
     <string name="app_name">OkAlarm</string>
 
-    <string name="submit"> Submit </string>
-    <string name="cancel"> Cancel </string>
+    <string name="submit">Submit</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
     <string name="alarm_colon">:</string>
-    <string name="delete"> Delete </string>
+    <string name="delete">Delete</string>
     <string name="empty_list_warning"> No Alarms Are Set </string>
 
-    <string name="puzzle_fragment_welcome"> Let us find a solution! </string>
+    <string name="puzzle_fragment_welcome">Don\'t be alarmed! </string>
 
     <string name="notification_channel_name">MyAlarmNotification</string>
     <string name="notification_channel_description">Alert user to alarm clock</string>
 
     <string name="reply_label">reply</string>
+
+    <string name="fragment_tag_alarm_fragment">AlarmFragment</string>
+    <string name="fragment_id_alarm_fragment">alarm_fragment</string>
+
+    <string name="fragment_tag_puzzle_fragment">PuzzleFragment</string>
+    <string name="fragment_id_puzzle_fragment">puzzle_fragment</string>
+
+    <string name="fragment_tag_activeAlarms_fragment">ActiveAlarmsFragment</string>
+    <string name="fragment_id_activeAlarms_fragment">active_alarms_fragment</string>
 </resources>

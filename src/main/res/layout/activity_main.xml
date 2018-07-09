@@ -6,29 +6,15 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-
-    <TextView
-        android:id="@+id/main_empty_alarm_view"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_margin="@dimen/sixteenDp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:text="@string/empty_list_warning"
-        android:visibility="gone"/>
-
     <FrameLayout
         android:id="@+id/main_frame_layout"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginStart="@dimen/eightDp"
-        android:layout_marginEnd="@dimen/eightDp"
+        android:layout_margin="@dimen/eightDp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/main_empty_alarm_view"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent">
-
 
         <android.support.v7.widget.RecyclerView
             android:id="@+id/main_recycler_view"
@@ -36,6 +22,7 @@
             android:layout_height="wrap_content"
             app:layoutManager="android.support.v7.widget.LinearLayoutManager">
         </android.support.v7.widget.RecyclerView>
+
     </FrameLayout>
 
     <android.support.design.widget.FloatingActionButton

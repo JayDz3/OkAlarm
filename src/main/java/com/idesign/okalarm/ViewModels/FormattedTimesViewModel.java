@@ -1,8 +1,10 @@
-package com.idesign.okalarm;
+package com.idesign.okalarm.ViewModels;
 
 import android.arch.lifecycle.LiveData;
 import android.arch.lifecycle.MutableLiveData;
 import android.arch.lifecycle.ViewModel;
+
+import com.idesign.okalarm.FormattedTime;
 
 import java.util.ArrayList;
 import java.util.List;
