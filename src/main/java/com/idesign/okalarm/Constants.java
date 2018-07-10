@@ -39,4 +39,6 @@ public class Constants {
 
   public static final String NO_RINGTONE = "None";
 
+  public static final int REQUEST_STORAGE_PERMISSION = 103;
+
 }

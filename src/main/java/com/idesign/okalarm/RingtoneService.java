@@ -18,6 +18,7 @@ public class RingtoneService extends Service {
 
   @Override
   public  int onStartCommand(Intent intent, int flags, int startId) {
+
     Uri uri = Uri.parse(intent.getExtras().getString(Constants.EXTRA_URI));
     this.ringtone = RingtoneManager.getRingtone(this, uri);
     ringtone.play();

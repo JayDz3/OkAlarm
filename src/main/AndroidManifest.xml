@@ -13,7 +13,6 @@
         <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <action android:name="com.idesign.okalarm.ReceiveAlarm" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
@@ -24,8 +23,8 @@
         <receiver android:name="com.idesign.okalarm.AlarmNotification" android:exported="false">
         </receiver>
 
-        <service android:name=".HandleBroadcastIntentService" android:exported="false" />
-        <service android:name=".RingtoneService"  android:exported="false"/>
+        <service android:name="com.idesign.okalarm.HandleBroadcastIntentService" android:exported="false" />
+        <service android:name="com.idesign.okalarm.RingtoneService"  android:exported="false"/>
     </application>
 
 </manifest>

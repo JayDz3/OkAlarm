@@ -79,7 +79,6 @@ public class AlarmNotification extends BroadcastReceiver {
     }
 
     notificationManagerCompat.notify(notificationId, notification);
-    context.getApplicationContext().unregisterReceiver(this);
   }
 
   public Notification getNotificationAction(Context context, Uri alarmSound, String _title, String _content, NotificationCompat.Action action, Bundle bundle) {
