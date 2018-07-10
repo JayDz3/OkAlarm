@@ -40,10 +40,12 @@ public class AlarmNotification extends BroadcastReceiver {
 
     NotificationManagerCompat notificationManagerCompat = NotificationManagerCompat.from(context.getApplicationContext());
     NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
-    NotificationChannel channel = new NotificationChannel(Constants.NOTIFICATION_CHANNEL_ID, Constants.NOTIFICATION_CLASS_TAG, NotificationManager.IMPORTANCE_DEFAULT);
 
-    channel.setDescription(Constants.NOTIFICATION_DESCRIPTION);
-    notificationManager.createNotificationChannel(channel);
+    if (notificationManager.getNotificationChannel(Constants.NOTIFICATION_CHANNEL_ID) == null) {
+      NotificationChannel channel = new NotificationChannel(Constants.NOTIFICATION_CHANNEL_ID, Constants.NOTIFICATION_CLASS_TAG, NotificationManager.IMPORTANCE_DEFAULT);
+      channel.setDescription(Constants.NOTIFICATION_DESCRIPTION);
+      notificationManager.createNotificationChannel(channel);
+    }
 
     RemoteInput remoteInput = new RemoteInput.Builder(Constants.NOTIFICATION_KEY_TEXT_REPLY)
     .setLabel(replyLabel)
@@ -77,6 +79,7 @@ public class AlarmNotification extends BroadcastReceiver {
     }
 
     notificationManagerCompat.notify(notificationId, notification);
+    context.getApplicationContext().unregisterReceiver(this);
   }
 
   public Notification getNotificationAction(Context context, Uri alarmSound, String _title, String _content, NotificationCompat.Action action, Bundle bundle) {

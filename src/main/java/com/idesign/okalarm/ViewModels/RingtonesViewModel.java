@@ -9,7 +9,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class RingtonesViewModel extends ViewModel {
+
   private MutableLiveData<List<Ringtone>> mRingtones;
+  private int _selectedItemIndex = -1;
 
   public LiveData<List<Ringtone>> getRingtones() {
     if (mRingtones == null) {
@@ -24,5 +26,21 @@ public class RingtonesViewModel extends ViewModel {
       mRingtones = new MutableLiveData<>();
     }
     this.mRingtones.setValue(ringtones);
+  }
+
+  public void set_selectedItemIndex(int position) {
+    _selectedItemIndex = position;
+  }
+
+  public Ringtone selectedRingtone(int position) {
+    return mRingtones.getValue().get(position);
+  }
+
+  public int index(Ringtone ringtone) {
+    return mRingtones.getValue().indexOf(ringtone);
+  }
+
+  public int get_selectedItemIndex() {
+    return _selectedItemIndex;
   }
 }

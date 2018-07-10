@@ -5,13 +5,16 @@
     android:layout_margin="@dimen/eightDp"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <TextView
+    <RadioButton
         android:id="@+id/fragment_alarm_type_text"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:textSize="@dimen/sixteenSP"/>
+        android:textSize="@dimen/sixteenSP"
+        android:buttonTint="@color/colorPrimary"
+        android:paddingStart="@dimen/eightDp"
+        android:paddingEnd="@dimen/eightDp"/>
 
 </android.support.constraint.ConstraintLayout>

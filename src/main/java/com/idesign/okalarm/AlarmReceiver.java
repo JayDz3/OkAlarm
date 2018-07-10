@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.media.Ringtone;
+import android.support.v4.content.LocalBroadcastManager;
 
 public class AlarmReceiver extends BroadcastReceiver {
 
@@ -18,44 +19,37 @@ public class AlarmReceiver extends BroadcastReceiver {
 
   @Override
   public void onReceive(Context context, Intent intent) {
-    if (intent.getExtras() != null) {
+    if (intent.getExtras() != null && intent.getAction() != null && intent.getAction().equalsIgnoreCase(Constants.ACTION_MANAGE_ALARM)) {
       if (isActivated == 0) {
-        if (isRegistered == 0) {
+         if (isRegistered == 0) {
           registerNotificationReceiver(context);
         }
-        Intent broadcastIntent = new Intent();
-        String finalTitle;
+
+        String finalTitle = intent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE) == null ? Constants.NO_RINGTONE : intent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE);
         String itemUri = intent.getStringExtra(Constants.EXTRA_URI);
-        if (intent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE) == null) {
-          finalTitle = Constants.NO_RINGTONE;
-        } else {
-          finalTitle = intent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE);
-        }
-        broadcastIntent.setAction(Constants.ACTION_HANDLE_NOTIFICATION);
+
+        Intent broadcastIntent = new Intent(Constants.ACTION_HANDLE_NOTIFICATION);
         broadcastIntent.putExtra(Constants.BOOT_TAG, Constants.NOTIFICATION_CLASS_TAG);
         broadcastIntent.putExtra(Constants.EXTRA_RINGTONE_TITLE, finalTitle);
         broadcastIntent.putExtra(Constants.EXTRA_URI, itemUri);
         broadcastIntent.putExtra(Constants.EXTRA_RAW_TIME, intent.getIntExtra(Constants.EXTRA_RAW_TIME, 0));
-        broadCastNotification(context, broadcastIntent);
+
+        sendBroadCastNotification(context, broadcastIntent);
         isRegistered = 1;
         return;
       }
-      if (intent.getAction() != null && intent.getAction().equalsIgnoreCase(Constants.ACTION_MANAGE_ALARM)) {
-        String ringtoneTitle = intent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE);
+        String ringtoneTitle = intent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE) == null ? Constants.NO_RINGTONE : intent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE);
         String itemUri = intent.getStringExtra(Constants.EXTRA_URI);
         int rawTime = intent.getIntExtra(Constants.EXTRA_RAW_TIME, 0);
-        if (ringtoneTitle == null) {
-          ringtoneTitle = Constants.NO_RINGTONE;
-        }
-        Intent sendIntent = new Intent(Constants.ACTION_RECEIVE_ALARM);
-        sendIntent.putExtra(Constants.EXTRA_RINGTONE_TITLE, ringtoneTitle);
-        sendIntent.putExtra(Constants.EXTRA_RAW_TIME, rawTime);
-        sendIntent.putExtra(Constants.EXTRA_URI, itemUri);
-        sendIntent.putExtra(Constants.BOOT_TAG, Constants.RECEIVE_ALARM_TAG);
+
+        Intent uiIntent = new Intent(Constants.ACTION_RECEIVE_ALARM);
+        uiIntent.putExtra(Constants.EXTRA_RINGTONE_TITLE, ringtoneTitle);
+        uiIntent.putExtra(Constants.EXTRA_RAW_TIME, rawTime);
+        uiIntent.putExtra(Constants.EXTRA_URI, itemUri);
+        uiIntent.putExtra(Constants.BOOT_TAG, Constants.RECEIVE_ALARM_TAG);
 
         startRingtoneService(context, itemUri);
-        startUiService(context, sendIntent);
-      }
+        startUiService(context, uiIntent);
     }
   }
 
@@ -66,12 +60,12 @@ public class AlarmReceiver extends BroadcastReceiver {
   }
 
    public void startUiService(Context context, Intent inboundIntent) {
-    Intent i = new Intent(context, HandleBroadcastIntentService.class);
-    i.putExtra(Constants.BOOT_TAG, Constants.RECEIVE_ALARM_TAG);
-    i.putExtra(Constants.EXTRA_RINGTONE_TITLE, inboundIntent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE));
-    i.putExtra(Constants.EXTRA_URI, inboundIntent.getStringExtra(Constants.EXTRA_URI));
-    i.putExtra(Constants.EXTRA_RAW_TIME, inboundIntent.getIntExtra(Constants.EXTRA_RAW_TIME, 0));
-    context.startService(i);
+    Intent updateUiIntent = new Intent(context, HandleBroadcastIntentService.class);
+    updateUiIntent.putExtra(Constants.BOOT_TAG, Constants.RECEIVE_ALARM_TAG);
+    updateUiIntent.putExtra(Constants.EXTRA_RINGTONE_TITLE, inboundIntent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE));
+    updateUiIntent.putExtra(Constants.EXTRA_URI, inboundIntent.getStringExtra(Constants.EXTRA_URI));
+    updateUiIntent.putExtra(Constants.EXTRA_RAW_TIME, inboundIntent.getIntExtra(Constants.EXTRA_RAW_TIME, 0));
+    context.startService(updateUiIntent);
   }
 
   private void registerNotificationReceiver(Context context) {
@@ -80,8 +74,8 @@ public class AlarmReceiver extends BroadcastReceiver {
     context.getApplicationContext().registerReceiver(alarmNotification, intentFilter);
   }
 
-  private void broadCastNotification(Context context, Intent intent) {
-    context.getApplicationContext().sendBroadcast(intent);
+  private void sendBroadCastNotification(Context context, Intent intent) {
+    context.sendBroadcast(intent);
   }
 
 }

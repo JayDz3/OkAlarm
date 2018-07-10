@@ -7,7 +7,7 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
+import android.widget.RadioButton;
 
 import java.util.List;
 
@@ -16,14 +16,14 @@ public class AlarmTypeAdapter extends RecyclerView.Adapter<AlarmTypeAdapter.Alar
   private List<Ringtone> mRingtones;
   private OnAlarmTypeListener mListener;
   private Context context;
-  private AlarmViewHolder currentSelectedView;
+  private int _activeIndex  = -1;
   static class AlarmViewHolder extends RecyclerView.ViewHolder {
 
-    TextView uriView;
+    RadioButton _radioButton;
 
     AlarmViewHolder(View view) {
       super(view);
-      uriView = view.findViewById(R.id.fragment_alarm_type_text);
+      _radioButton = view.findViewById(R.id.fragment_alarm_type_text);
     }
   }
 
@@ -39,6 +39,15 @@ public class AlarmTypeAdapter extends RecyclerView.Adapter<AlarmTypeAdapter.Alar
     }
   }
 
+  public void setItems(List<Ringtone> ringtones) {
+    mRingtones = ringtones;
+    notifyDataSetChanged();
+  }
+
+  public void setSelectedIndex(int index) {
+    _activeIndex = index;
+  }
+
   @Override
   @NonNull
   public AlarmTypeAdapter.AlarmViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -49,8 +58,13 @@ public class AlarmTypeAdapter extends RecyclerView.Adapter<AlarmTypeAdapter.Alar
   @Override
   public void onBindViewHolder(@NonNull AlarmTypeAdapter.AlarmViewHolder viewHolder, final int position) {
     final Ringtone ringtone = mRingtones.get(position);
-    viewHolder.uriView.setText(ringtone.getTitle(context));
-    viewHolder.itemView.setOnClickListener(l -> selectRingtone(ringtone, viewHolder));
+    viewHolder._radioButton.setText(ringtone.getTitle(context));
+    viewHolder._radioButton.setOnClickListener(l -> selectRingtone(ringtone, position));
+    if (_activeIndex == position) {
+      viewHolder._radioButton.setChecked(true);
+    } else {
+      viewHolder._radioButton.setChecked(false);
+    }
   }
 
   @Override
@@ -58,16 +72,18 @@ public class AlarmTypeAdapter extends RecyclerView.Adapter<AlarmTypeAdapter.Alar
     return mRingtones.size();
   }
 
-  private void selectRingtone(Ringtone ringtone, AlarmViewHolder viewHolder) {
-    mListener.onSelectAlarm(ringtone);
-    if (currentSelectedView != null) {
-      currentSelectedView.itemView.setBackgroundColor(context.getColor(R.color.colorTransparent));
+  private void selectRingtone(Ringtone ringtone, final int position) {
+    if (_activeIndex == position) {
+      _activeIndex = -1;
+      ringtone = null;
+    } else {
+      _activeIndex = position;
     }
-    currentSelectedView = viewHolder;
-    viewHolder.itemView.setBackgroundColor(context.getColor(R.color.colorLightGray));
+    mListener.onSelectAlarm(ringtone, _activeIndex);
+    notifyDataSetChanged();
   }
 
   public interface OnAlarmTypeListener {
-    void onSelectAlarm(Ringtone ringtone);
+    void onSelectAlarm(Ringtone ringtone, final int position);
   }
 }

@@ -7,7 +7,6 @@ import android.app.AlarmManager;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.RemoteInput;
-import android.arch.lifecycle.Observer;
 import android.arch.lifecycle.ViewModelProviders;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -26,15 +25,11 @@ import android.support.v4.app.Fragment;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.support.v7.widget.DividerItemDecoration;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.view.View;
-import android.view.ViewPropertyAnimator;
 import android.widget.Toast;
 
-import com.idesign.okalarm.Interfaces.AlarmItemListener;
-import com.idesign.okalarm.ViewModels.FormattedTimesViewModel;
+import com.idesign.okalarm.ViewModels.ActiveAlarmsViewModel;
+import com.idesign.okalarm.ViewModels.RingtonesViewModel;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -43,15 +38,13 @@ import java.util.List;
 import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity implements AlarmFragment.OnAlarmSet,
-AlarmItemListener,
-PuzzleFragment.OnPuzzleListener {
+PuzzleFragment.OnPuzzleListener,
+ActiveAlarmsFragment.ActiveAlarmFragmentListener {
 
-  AlarmFragment newFragment;
+  ActiveAlarmsFragment activeAlarmsFragment;
+  AlarmFragment addAlarmFragment;
   PuzzleFragment puzzleFragment;
   FloatingActionButton fab;
-
-  private RecyclerView recyclerView;
-  private FormattedTimesAdapter adapter;
 
   private AlarmManager alarmManager;
   private List<Ringtone> mRingtones;
@@ -63,8 +56,6 @@ PuzzleFragment.OnPuzzleListener {
   AlarmReceiver mAlarmReceiver;
 
   private List<Long> times;
-  private List<FormattedTime> formattedTimes;
-  private FormattedTimesViewModel viewModel;
 
   public static final String EXTRA_FRAGMENT_INT = "extra.fragment.integer";
   public static final String EXTRA_HOUR = "extra.hour";
@@ -84,41 +75,35 @@ PuzzleFragment.OnPuzzleListener {
   private List<Uri> uris;
   RingtoneManager ringtoneManager;
 
+  private ActiveAlarmsViewModel model;
+  private RingtonesViewModel ringtonesViewModel;
+
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
 
-    Intent getIntent = getIntent();
-    recyclerView = findViewById(R.id.main_recycler_view);
+    model = ViewModelProviders.of(this).get(ActiveAlarmsViewModel.class);
+    ringtonesViewModel = ViewModelProviders.of(this).get(RingtonesViewModel.class);
 
     fab = findViewById(R.id.main_fab);
     fab.setOnClickListener(l -> setFragment());
 
-    formattedTimes = new ArrayList<>();
     times = new ArrayList<>();
     mRingtones = new ArrayList<>();
     uris = new ArrayList<>();
     alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
 
-    adapter = new FormattedTimesAdapter(formattedTimes, MainActivity.this);
-    DividerItemDecoration itemDecoration = new DividerItemDecoration(recyclerView.getContext(), DividerItemDecoration.VERTICAL);
-    recyclerView.setLayoutManager(new LinearLayoutManager(this));
-    recyclerView.addItemDecoration(itemDecoration);
-    recyclerView.setAdapter(adapter);
-
     ringtoneManager = new RingtoneManager(MainActivity.this);
     Cursor cursor = ringtoneManager.getCursor();
+
     while (cursor.moveToNext()) {
       int currentPos = cursor.getPosition();
       Uri uri = ringtoneManager.getRingtoneUri(currentPos);
       uris.add(uri);
       mRingtones.add(ringtoneManager.getRingtone(currentPos));
     }
-
-    viewModel = ViewModelProviders.of(this).get(FormattedTimesViewModel.class);
-    final Observer<List<FormattedTime>> itemObserver = items -> MainActivity.this.setViewModel(adapter, items);
-    viewModel.getItems().observe(this, itemObserver);
+    ringtonesViewModel.setRingtones(mRingtones);
 
     if (savedInstanceState != null) {
       getValuesFromBundle(savedInstanceState);
@@ -126,8 +111,9 @@ PuzzleFragment.OnPuzzleListener {
         goToPuzzleFragment();
         return;
       }
-      toggleView();
+
     } else {
+      Intent getIntent = getIntent();
       String _message = (String) getMessageText(getIntent);
       String itemUri = getIntent.getStringExtra(Constants.EXTRA_URI);
       String answer = getNameOfDay();
@@ -251,7 +237,7 @@ PuzzleFragment.OnPuzzleListener {
   public void toggleView() {
     switch (mFragment_int) {
       case -1:
-        showRecyclerView();
+        attachActiveAlarmsFragment();
         break;
       case 0:
         setFragment();
@@ -264,22 +250,18 @@ PuzzleFragment.OnPuzzleListener {
     }
   }
 
-  public void setViewModel(FormattedTimesAdapter adapter, List<FormattedTime> newTimes) {
-    if (newTimes != null) {
-      formattedTimes = newTimes;
-      adapter.setList(formattedTimes);
-    }
-  }
   /*=======================================*
    *  Add AlarmFragment to set new alarm   *
    *=======================================*/
   public void setFragment() {
     mFragment_int = 0;
-    if (newFragment != null && newFragment.isVisible()) {
+    if (addAlarmFragment != null && addAlarmFragment.isVisible()) {
       return;
     }
-    animator(recyclerView, 0.0f, 300)
-    .setListener(listenerAdapter());
+    addAlarmFragment = AlarmFragment.newInstance();
+
+    attachFragment(addAlarmFragment);
+    fab.setVisibility(View.GONE);
   }
 
   /*===============================================*
@@ -290,49 +272,24 @@ PuzzleFragment.OnPuzzleListener {
     if (puzzleFragment != null && puzzleFragment.isVisible()) {
       return;
     }
-    animator(recyclerView, 0.0f, 300)
-    .setListener(listenerAdapter(hourOfDay, minute, am_pm, millis));
+    puzzleFragment = PuzzleFragment.newInstance(hourOfDay, minute, am_pm);
+    _hour = hourOfDay;
+    _minute = minute;
+    _am_pm = am_pm;
+    _rawtime = millis;
+    attachFragment(puzzleFragment);
+    fab.setVisibility(View.GONE);
   }
 
-  public ViewPropertyAnimator animator(View view, float alphaTime, int duration) {
-    return view.animate()
-    .alpha(alphaTime)
-    .setDuration(duration);
-  }
-
-  /*=======================*
-   *  For puzzle fragment  *
-   *=======================*/
-  public AnimatorListenerAdapter listenerAdapter(int hourOfDay, int minute, String am_pm, long millis) {
-    return new AnimatorListenerAdapter() {
-      @Override
-      public void onAnimationEnd(Animator animation) {
-        super.onAnimationEnd(animation);
-        recyclerView.setVisibility(View.GONE);
-        fab.setVisibility(View.GONE);
-        puzzleFragment = PuzzleFragment.newInstance(hourOfDay, minute, am_pm);
-        _hour = hourOfDay;
-        _minute = minute;
-        _am_pm = am_pm;
-        _rawtime = millis;
-        attachFragment(puzzleFragment);
-      }
-    };
-  }
-
-  /*======================*
-   *  for Alarm Fragment  *
-   *======================*/
-  public AnimatorListenerAdapter listenerAdapter() {
-    return new AnimatorListenerAdapter() {
-      public void onAnimationEnd(Animator animation) {
-        super.onAnimationEnd(animation);
-        newFragment = AlarmFragment.newInstance();
-        recyclerView.setVisibility(View.GONE);
-        fab.setVisibility(View.GONE);
-        attachFragment(newFragment);
-      }
-    };
+  public void attachActiveAlarmsFragment() {
+    mFragment_int = -1;
+    if (activeAlarmsFragment != null && activeAlarmsFragment.isVisible()) {
+      return;
+    }
+    activeAlarmsFragment = ActiveAlarmsFragment.newInstance();
+    getSupportFragmentManager().beginTransaction()
+    .replace(R.id.main_frame_layout, activeAlarmsFragment).commit();
+    fab.setVisibility(View.VISIBLE);
   }
 
   public void attachFragment(Fragment fragment) {
@@ -347,37 +304,16 @@ PuzzleFragment.OnPuzzleListener {
     setFragment(now.get(Calendar.HOUR), now.get(Calendar.MINUTE), am_pm_string, now.getTimeInMillis());
   }
 
-  public void showRecyclerView() {
-    mFragment_int = - 1;
-    if (newFragment != null && newFragment.isVisible()) {
-      detachFragment(newFragment);
-      return;
-    }
-    if (puzzleFragment != null && puzzleFragment.isVisible()) {
-      detachFragment(puzzleFragment);
-      return;
-    }
-    fab.setVisibility(View.VISIBLE);
-  }
-
   public void detachFragment(Fragment fragment) {
     getSupportFragmentManager().beginTransaction()
     .detach(fragment).commit();
-    animator(recyclerView, 1.0f, 300)
-    .setListener(new AnimatorListenerAdapter() {
-      @Override
-      public void onAnimationEnd(Animator animation) {
-        super.onAnimationEnd(animation);
-        recyclerView.setVisibility(View.VISIBLE);
-        fab.setVisibility(View.VISIBLE);
-      }
-    });
+    fab.setVisibility(View.VISIBLE);
   }
 
   /*===========================*
    *  AlarmFragment Interface  *
    *===========================*/
-  public void onSet(int hourOfDay, int minute, String am_pm, Ringtone ringtone) {
+  public void onSet(int hourOfDay, int minute, String am_pm, final int position) {
     Calendar calendar = Calendar.getInstance();
     setCalendarValues(calendar, hourOfDay, minute);
     Calendar today = Calendar.getInstance();
@@ -397,14 +333,15 @@ PuzzleFragment.OnPuzzleListener {
       String _date = String.valueOf(calendar.get(Calendar.DAY_OF_MONTH));
       String _combined = _month + " " + _date;
 
+      Ringtone ringtone = position == -1 ? null : ringtonesViewModel.selectedRingtone(position);
       String _title = ringtone == null ? null : ringtone.getTitle(this);
       Uri itemUri = ringtone == null ? RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM) : getUri(ringtone);
 
-      FormattedTime formattedTime = new FormattedTime(calendar.getTimeInMillis(), hour, calendar.get(Calendar.MINUTE), am_pm, _combined, true, false, _title, itemUri.toString());
-      _rawtime = formattedTime.get_rawTime();
-      addNewItem(formattedTime);
-      startIntent(formattedTime);
-      showRecyclerView();
+      ActiveAlarm activeAlarm = new ActiveAlarm(calendar.getTimeInMillis(), hour, calendar.get(Calendar.MINUTE), am_pm, _combined, true, false, _title, itemUri.toString());
+      _rawtime = activeAlarm.get_rawTime();
+      addNewItem(activeAlarm);
+      startIntent(activeAlarm);
+      attachActiveAlarmsFragment();
     }
   }
 
@@ -424,7 +361,7 @@ PuzzleFragment.OnPuzzleListener {
    *================================================*/
   public void onCancel() {
     silenceAlarm();
-    showRecyclerView();
+    attachActiveAlarmsFragment();
   }
   // END AlarmFragment Interface //
 
@@ -462,9 +399,14 @@ PuzzleFragment.OnPuzzleListener {
     }
   }
 
-  public void addNewItem(FormattedTime formattedTime) {
-    formattedTimes.add(formattedTime);
-    formattedTimes.sort((a, b) -> {
+  public void addNewItem(ActiveAlarm activeAlarm) {
+    List<ActiveAlarm> target = model.getItems().getValue();
+    target.add(activeAlarm);
+    model.setActiveAlarms(sorted(target));
+  }
+
+  public List<ActiveAlarm> sorted(List<ActiveAlarm> source) {
+    source.sort((a, b) -> {
       if (a.get_rawTime() < b.get_rawTime()) {
         return -1;
       }
@@ -476,29 +418,29 @@ PuzzleFragment.OnPuzzleListener {
       }
       return 0;
     });
-    viewModel.setFormattedTimes(formattedTimes);
+    return source;
   }
 
   /*=======================*
    *  Set new Alarm intent *
    *=======================*/
-  public void startIntent(FormattedTime formattedTime) {
-    populateAlarmIntent(formattedTime);
-    alarmManager.set(AlarmManager.RTC_WAKEUP, formattedTime.get_rawTime(), pendingIntent);
+  public void startIntent(ActiveAlarm activeAlarm) {
+    populateAlarmIntent(activeAlarm);
+    alarmManager.set(AlarmManager.RTC_WAKEUP, activeAlarm.get_rawTime(), pendingIntent);
   }
 
-  public void cancelIntent(FormattedTime formattedTime) {
-    populateAlarmIntent(formattedTime);
+  public void cancelIntent(ActiveAlarm activeAlarm) {
+    populateAlarmIntent(activeAlarm);
     alarmManager.cancel(pendingIntent);
   }
 
-  public void populateAlarmIntent(FormattedTime formattedTime) {
-    int time = (int) formattedTime.get_rawTime();
+  public void populateAlarmIntent(ActiveAlarm activeAlarm) {
+    int time = (int) activeAlarm.get_rawTime();
     intent = new Intent(this, AlarmReceiver.class);
-    intent.putExtra(Constants.EXTRA_RINGTONE_TITLE, formattedTime.get_title());
+    intent.putExtra(Constants.EXTRA_RINGTONE_TITLE, activeAlarm.get_title());
     intent.putExtra(Constants.EXTRA_RAW_TIME, time);
     intent.putExtra(Constants.BOOT_TAG, Constants.ALARM_CLASS_TAG);
-    intent.putExtra(Constants.EXTRA_URI, formattedTime.get_itemUri());
+    intent.putExtra(Constants.EXTRA_URI, activeAlarm.get_itemUri());
     intent.setAction(Constants.ACTION_MANAGE_ALARM);
     pendingIntent = PendingIntent.getBroadcast(this, time, intent, 0);
   }
@@ -515,24 +457,18 @@ PuzzleFragment.OnPuzzleListener {
   public void onDeleteAlarm(final int position, long rawTime) {
     silenceAlarm();
     times.remove(rawTime);
-    FormattedTime formattedTime = formattedTimes.get(position);
-    cancelIntent(formattedTime);
-    viewModel.setFormattedTimes(formattedTimes);
+    ActiveAlarm activeAlarm = model.selectedAlarm(position);
+    cancelIntent(activeAlarm);
+    model.removeAlarm(position);
   }
 
-  public void onReady() {
-    if (newFragment == null) {
-      return;
-    }
-    newFragment.setRingtones(mRingtones);
-  }
-
-  public void onToggleAlarm(boolean isToggled, FormattedTime formattedTime) {
+  public void onToggleAlarm(boolean isToggled, final int position) {
+    ActiveAlarm alarm = model.selectedAlarm(position);
     if (!isToggled) {
       silenceAlarm();
-      cancelIntent(formattedTime);
+      cancelIntent(alarm);
     } else {
-      startIntent(formattedTime);
+      startIntent(alarm);
     }
   }
 
@@ -551,12 +487,12 @@ PuzzleFragment.OnPuzzleListener {
 
   public void onAnswer(int answer) {
     silenceAlarm();
-    showRecyclerView();
+    attachActiveAlarmsFragment();
   }
 
   public void onAnswer(String answer) {
     silenceAlarm();
-    showRecyclerView();
+    attachActiveAlarmsFragment();
   }
 
   /*======================================*
@@ -640,11 +576,11 @@ PuzzleFragment.OnPuzzleListener {
   @Override
   public void onBackPressed() {
     if (puzzleFragment != null && puzzleFragment.isVisible()) {
-      showRecyclerView();
+      attachActiveAlarmsFragment();
       return;
     }
     if (mFragment_int == 0) {
-      showRecyclerView();
+      attachActiveAlarmsFragment();
       silenceAlarm();
       return;
     }
