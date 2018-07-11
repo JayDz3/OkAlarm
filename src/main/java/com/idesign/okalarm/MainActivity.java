@@ -140,6 +140,8 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
       if (getIntent.getStringExtra(Constants.BOOT_TAG) == null && hasPendingNotifications) {
         Bundle _coldNotificationBundle = appNotifications.get(0).getNotification().extras;
         String _coldUri = _coldNotificationBundle.getString(Constants.EXTRA_URI);
+        _activeUri = Uri.parse(_coldUri);
+        showToast(_coldUri);
         onActiveAlarm(appNotifications, _coldUri);
         return;
       }
@@ -149,6 +151,8 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
         showToast(getIntent.getStringExtra(Constants.BOOT_TAG));
         String _message = (String) getMessageText(getIntent);
         String itemUri = getIntent.getStringExtra(Constants.EXTRA_URI);
+        showToast(itemUri);
+        _activeUri = Uri.parse(itemUri);
         String answer = getNameOfDay();
         _isCorrect = _message.equalsIgnoreCase(answer);
         if (_isCorrect) {
@@ -176,8 +180,10 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
       } else {
         fab.setVisibility(View.GONE);
       }
-      if (alarmIsActive(_activeUri)) {
-        goToPuzzleFragment();
+      // Removing stopRingtoneService from onDestroy fixes this issue
+      if (_activeUri != null && mFragment_int == 1) {
+       // startRingtoneService(this, _activeUri.toString());
+      //  goToPuzzleFragment();
       }
   }
 
@@ -357,7 +363,12 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
 
       Ringtone ringtone = position == -1 ? null : ringtonesViewModel.selectedRingtone(position);
       String _title = ringtone == null ? null : ringtone.getTitle(this);
-      Uri itemUri = ringtone == null ? RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM) : getUri(ringtone);
+      Uri itemUri;
+      if (ringtone == null){
+        itemUri = RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM);
+      } else {
+       itemUri = ringtoneManager.getRingtoneUri(position);
+      }
 
       ActiveAlarm activeAlarm = new ActiveAlarm(calendar.getTimeInMillis(), hour, calendar.get(Calendar.MINUTE), am_pm, _combined, true, false, _title, itemUri.toString());
       _rawtime = activeAlarm.get_rawTime();
@@ -568,7 +579,7 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
   @Override
   public void onDestroy() {
     super.onDestroy();
-    stopRingtoneService();
+    // stopRingtoneService();
   }
 
   @Override
@@ -593,6 +604,7 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
       _am_pm = savedInstanceState.getString(EXTRA_AM_PM);
       _rawtime = savedInstanceState.getLong(EXTRA_RAW_TIME);
       String itemUri = savedInstanceState.getString(Constants.EXTRA_URI);
+      String ringTonetitle = savedInstanceState.getString(EXTRA_RINGTONE_TITLE);
       _activeUri = itemUri == null ? null : Uri.parse(itemUri);
     }
   }
