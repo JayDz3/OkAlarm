@@ -11,15 +11,13 @@ import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.service.notification.StatusBarNotification;
-import android.support.constraint.ConstraintLayout;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.support.v4.app.RemoteInput;
-import android.widget.Toast;
 
-public class AlarmNotification extends BroadcastReceiver {
+public class NotificationService extends BroadcastReceiver {
 
-  public AlarmNotification() { }
+  public NotificationService() {}
 
   @Override
   public void onReceive(Context context, Intent intent) {
@@ -39,7 +37,6 @@ public class AlarmNotification extends BroadcastReceiver {
     String replyLabel = context.getResources().getString(R.string.reply_label);
     int rawTime = receivedIntent.getIntExtra(Constants.EXTRA_RAW_TIME, 0);
     int notificationId = 1;
-
 
     NotificationManagerCompat notificationManagerCompat = NotificationManagerCompat.from(context.getApplicationContext());
     NotificationManager notificationManager = context.getSystemService(NotificationManager.class);

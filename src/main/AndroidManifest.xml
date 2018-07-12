@@ -18,10 +18,9 @@
             </intent-filter>
         </activity>
 
-        <receiver android:name="com.idesign.okalarm.AlarmReceiver" android:exported="false">
-        </receiver>
+        <receiver android:name=".IntentManager" android:exported="false" />
 
-        <receiver android:name="com.idesign.okalarm.AlarmNotification" android:exported="false">
+        <receiver android:name="com.idesign.okalarm.NotificationService" android:exported="false">
         </receiver>
 
         <service android:name="com.idesign.okalarm.HandleBroadcastIntentService" android:exported="false" />
