@@ -4,6 +4,7 @@ import android.app.TimePickerDialog;
 import android.arch.lifecycle.ViewModelProviders;
 import android.content.Context;
 import android.content.res.Configuration;
+import android.media.AudioManager;
 import android.media.Ringtone;
 import android.os.Bundle;
 
@@ -19,6 +20,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TimePicker;
 
@@ -29,6 +31,7 @@ import java.util.Calendar;
 public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSetListener, AlarmTypeAdapter.OnAlarmTypeListener {
 
   RecyclerView recyclerView;
+  ImageView muteImage;
   Button submitButton;
   Button cancelButton;
   private TimePicker timePicker;
@@ -72,7 +75,12 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
   public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
 
     seekBar = view.findViewById(R.id.fragment_volume_slider);
+    muteImage = view.findViewById(R.id.fragment_mute_icon);
+
     seekBar.setProgress(0);
+
+    AudioManager audioManager = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+    seekBar.setMax(audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM));
     seekBar.setOnSeekBarChangeListener(seekbarListener);
     recyclerView = view.findViewById(R.id.fragment_alarm_list);
     DividerItemDecoration itemDecoration = new DividerItemDecoration(view.getContext(), DividerItemDecoration.VERTICAL);
@@ -137,14 +145,20 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
   private SeekBar.OnSeekBarChangeListener seekbarListener = new SeekBar.OnSeekBarChangeListener() {
     public void onStartTrackingTouch(SeekBar seekBar) {}
     public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-      updateTextSize(progress);
+      updateView(progress);
     }
-    public void onStopTrackingTouch(SeekBar seekBar) {}
+    public void onStopTrackingTouch(SeekBar seekBar) {
+    }
   };
 
-  private void updateTextSize(int progress) {
-    Log.d("Alarm fragment", "volume: " + progress);
+  private void updateView(int progress) {
+    if (progress == 0) {
+      muteImage.setVisibility(View.VISIBLE);
+    } else {
+      muteImage.setVisibility(View.INVISIBLE);
+    }
   }
+
 
   public void onSelectAlarm(Ringtone ringtone, final int position) {
     this.ringtone = ringtone;

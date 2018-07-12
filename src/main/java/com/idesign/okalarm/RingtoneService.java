@@ -21,7 +21,6 @@ public class RingtoneService extends Service {
   private int _volumeBefore;
   private AudioManager audioManager;
 
-  private MediaPlayer mediaPlayer;
   @Override
   public IBinder onBind(Intent intent){
     return null;
@@ -47,41 +46,12 @@ public class RingtoneService extends Service {
      audioManager.setStreamVolume(AudioManager.STREAM_ALARM, _volumeNow, 0);
      ringtone.setAudioAttributes(new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).build());
      ringtone.play();
-
-    /*=======================*
-     *   Using Media Player  *
-     *=======================*/
-    /* if (mediaPlayer != null) {
-      mediaPlayer.stop();
-      mediaPlayer.reset();
-      mediaPlayer.release();
-      mediaPlayer = null;
-      Log.d("RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR", "not null");
-    }
-      mediaPlayer = new MediaPlayer();
-      Log.d("Ringtone service EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE", "media player IS null");
-      try {
-        mediaPlayer.setDataSource(this, uri);
-        mediaPlayer.setAudioAttributes(new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).build());
-        mediaPlayer.setVolume(_volumeNow, _volumeNow);
-        mediaPlayer.prepare();
-        mediaPlayer.start();
-      } catch (IOException e) {
-        Log.d("Ringtone service", "Catch clause");
-      } */
     return START_NOT_STICKY;
   }
 
   @Override
   public void onDestroy() {
-    // using audio manager //
     audioManager.setStreamVolume(AudioManager.STREAM_ALARM, _volumeBefore, 0);
     ringtone.stop();
-
-    // media player  //
-    /* mediaPlayer.stop();
-    mediaPlayer.reset();
-    mediaPlayer.release();
-    mediaPlayer = null; */
   }
 }

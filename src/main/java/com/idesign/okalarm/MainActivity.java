@@ -8,6 +8,8 @@ import android.app.AlarmManager;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.RemoteInput;
+import android.app.job.JobInfo;
+import android.app.job.JobScheduler;
 import android.arch.lifecycle.ViewModelProviders;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -26,6 +28,9 @@ import android.media.AudioManager;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
+import android.os.Handler;
+import android.os.PersistableBundle;
+import android.os.ResultReceiver;
 import android.service.notification.StatusBarNotification;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
@@ -92,11 +97,13 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
   private ActiveAlarmsViewModel model;
   private RingtonesViewModel ringtonesViewModel;
 
+  private JobScheduler jobScheduler;
+
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
-
+    jobScheduler = (JobScheduler) getSystemService(Context.JOB_SCHEDULER_SERVICE);
     model = ViewModelProviders.of(this).get(ActiveAlarmsViewModel.class);
     ringtonesViewModel = ViewModelProviders.of(this).get(RingtonesViewModel.class);
 
@@ -141,34 +148,35 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
       if (getIntent.getStringExtra(Constants.BOOT_TAG) == null && hasPendingNotifications) {
         Bundle _coldNotificationBundle = appNotifications.get(0).getNotification().extras;
         String _coldUri = _coldNotificationBundle.getString(Constants.EXTRA_URI);
+        int volume = _coldNotificationBundle.getInt(Constants.EXTRA_VOLUME);
+        int id = getIntent.getIntExtra(Constants.EXTRA_RAW_TIME, 0);
         _activeUri = Uri.parse(_coldUri);
-        showToast(_coldUri);
-        onActiveAlarm(appNotifications, _coldUri);
+        onActiveAlarm(appNotifications, _coldUri, volume, id);
         return;
       }
 
       // Started from notification tray
       if (getIntent.getStringExtra(Constants.BOOT_TAG) != null) {
-        showToast(getIntent.getStringExtra(Constants.BOOT_TAG));
         String _message = (String) getMessageText(getIntent);
         String itemUri = getIntent.getStringExtra(Constants.EXTRA_URI);
-        showToast(itemUri);
-        _activeUri = Uri.parse(itemUri);
+        int volume = getIntent.getIntExtra(Constants.EXTRA_VOLUME, 0);
+        int id = getIntent.getIntExtra(Constants.EXTRA_RAW_TIME, 0);
         String answer = getNameOfDay();
+        _activeUri = Uri.parse(itemUri);
         _isCorrect = _message.equalsIgnoreCase(answer);
-        if (_isCorrect) {
-          showToast("Correct!");
-        } else {
-          showToast("Sorry, wrong day");
-        }
-        onActiveAlarm(appNotifications, itemUri);
+        String result = _isCorrect ? "Correct!" : "Sorry, wrong day";
+        showToast(result);
+        onActiveAlarm(appNotifications, itemUri, volume, id);
       }
     }
   }
 
-  public void onActiveAlarm(List<StatusBarNotification> clearNotifications, String uri) {
+  /*=============================*
+   *  ID is for JobService only  *
+   *=============================*/
+  public void onActiveAlarm(List<StatusBarNotification> clearNotifications, String uri, int volume, int id) {
     broadcastCloseNotificationTray(clearNotifications);
-    startRingtoneService(this, uri);
+    startRingtoneService(this, uri, volume);
     goToPuzzleFragment();
     disableNotificationService();
   }
@@ -480,11 +488,6 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
     pendingIntent = PendingIntent.getBroadcast(this, time, intent, 0);
   }
 
-  public void stopRingtoneService() {
-    Intent i = new Intent(this, RingtoneService.class);
-    this.stopService(i);
-  }
-
   /*================================================*
    *  From ItemAdapter single item actions          *
    *  AlarmItemListener Interface                   *
@@ -507,15 +510,6 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
       startIntent(alarm);
     }
   }
-
-  public boolean alarmIsActive(Uri activeUri) {
-    if (activeUri != null) {
-      Ringtone ringtone = RingtoneManager.getRingtone(this, Uri.parse(activeUri.toString()));
-      return ringtone.isPlaying();
-    }
-    return false;
-  }
-
 
   /*==========================*
    *   From Puzzle Fragment   *
@@ -548,20 +542,42 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
           int volume = intent.getIntExtra(Constants.EXTRA_VOLUME, 0);
           activeRingtone = RingtoneManager.getRingtone(context, Uri.parse(itemUri));
           _activeUri = Uri.parse(itemUri);
-          // AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-          // setVolumeControlStream(AudioManager.STREAM_ALARM);
-          // audioManager.setStreamVolume(AudioManager.STREAM_ALARM, volume, 0);
           goToPuzzleFragment();
         }
       }
     }
   };
 
-  public void startRingtoneService(Context context, String itemUri) {
+  public void startRingtoneService(Context context, String itemUri, int volume) {
     Intent ringtoneIntent = new Intent(context, RingtoneService.class);
     ringtoneIntent.putExtra(Constants.EXTRA_URI, itemUri);
+    ringtoneIntent.putExtra(Constants.EXTRA_VOLUME, volume);
     context.startService(ringtoneIntent);
   }
+
+  public void stopRingtoneService() {
+    Intent i = new Intent(this, RingtoneService.class);
+    stopService(i);
+  }
+
+  /* public void startJobService(Context context, String itemUri, int volume, int id) {
+    PersistableBundle bundle = new PersistableBundle();
+    bundle.putString(Constants.EXTRA_URI, itemUri);
+    bundle.putInt(Constants.EXTRA_VOLUME, volume);
+    ComponentName serviceComponent = new ComponentName(context, RingtoneJobService.class);
+    JobInfo.Builder builder = new JobInfo.Builder(id, serviceComponent).setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+    .setRequiresCharging(true);
+    builder.setExtras(bundle);
+    jobScheduler.schedule(builder.build());
+  }
+
+  public void cancelAllServices() {
+    List<JobInfo> allJobs = jobScheduler.getAllPendingJobs();
+    for (JobInfo info : allJobs) {
+      showToast("ID: " + info.getId());
+    }
+    jobScheduler.cancelAll();
+  } */
 
   @Override
   protected void onStart() {

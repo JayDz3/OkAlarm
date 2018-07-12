@@ -65,25 +65,58 @@
         android:layout_marginEnd="@dimen/eightDp"
         android:layout_marginBottom="@dimen/fourDp"
         app:layout_constraintTop_toBottomOf="@id/divider_one"
-        app:layout_constraintBottom_toTopOf="@id/fragment_volume_slider"
+        app:layout_constraintBottom_toTopOf="@id/fragment_alarm_volumeLayout"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
     </android.support.v7.widget.RecyclerView>
 
-    <SeekBar
-        android:id="@+id/fragment_volume_slider"
+    <android.support.constraint.ConstraintLayout
+        android:id="@+id/fragment_alarm_volumeLayout"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_margin="@dimen/eightDp"
-        android:padding="@dimen/eightDp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:min="0"
-        android:max="10"
-        android:progress="1"
-        android:thumbTint="@color/colorPrimary"
-        android:progressTint="@color/colorPrimary"/>
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <View
+            android:id="@+id/divider_two"
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:background="@color/colorDarkGray"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
+
+        <ImageView
+            android:id="@+id/fragment_mute_icon"
+            android:src="@drawable/ic_volume_off_black_24dp"
+            android:contentDescription="@string/content_description_muted"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="@dimen/eightDp"
+            app:layout_constraintTop_toBottomOf="@id/divider_two"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <SeekBar
+            android:id="@+id/fragment_volume_slider"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/eightDp"
+            android:layout_marginStart="@dimen/eightDp"
+            android:layout_marginBottom="@dimen/eightDp"
+            android:layout_marginEnd="@dimen/sixteenDp"
+            android:padding="@dimen/eightDp"
+            app:layout_constraintTop_toBottomOf="@id/divider_two"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toEndOf="@id/fragment_mute_icon"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:min="0"
+            android:progress="1"
+            android:thumbTint="@color/colorPrimary"
+            android:progressTint="@color/colorPrimary"/>
+
+    </android.support.constraint.ConstraintLayout>
 
 </android.support.constraint.ConstraintLayout>

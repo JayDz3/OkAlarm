@@ -11,6 +11,7 @@ import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.service.notification.StatusBarNotification;
+import android.support.constraint.ConstraintLayout;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.support.v4.app.RemoteInput;
@@ -34,10 +35,11 @@ public class AlarmNotification extends BroadcastReceiver {
   public void createNotificationChannel(Context context, Intent receivedIntent) {
     String ringtoneTitle = receivedIntent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE);
     String itemUri = receivedIntent.getStringExtra(Constants.EXTRA_URI);
-    int voluem =receivedIntent.getIntExtra(Constants.EXTRA_VOLUME, 0);
+    int volume =receivedIntent.getIntExtra(Constants.EXTRA_VOLUME, 0);
     String replyLabel = context.getResources().getString(R.string.reply_label);
     int rawTime = receivedIntent.getIntExtra(Constants.EXTRA_RAW_TIME, 0);
     int notificationId = 1;
+
 
     NotificationManagerCompat notificationManagerCompat = NotificationManagerCompat.from(context.getApplicationContext());
     NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
@@ -57,7 +59,7 @@ public class AlarmNotification extends BroadcastReceiver {
     intent.putExtra(Constants.EXTRA_RINGTONE_TITLE, ringtoneTitle);
     intent.putExtra(Constants.EXTRA_URI, itemUri);
     intent.putExtra(Constants.EXTRA_RAW_TIME, rawTime);
-    intent.putExtra(Constants.EXTRA_VOLUME, voluem);
+    intent.putExtra(Constants.EXTRA_VOLUME, volume);
     intent.setFlags(Constants.FLAG_NEW_TASK| Constants.FLAG_CLEAR_TASK);
 
     PendingIntent pendingIntent = PendingIntent.getActivity(context.getApplicationContext(), Constants.NOTIFICATION_ALARM_REQUEST_CODE, intent, Constants.FLAG_UPDATE_CURRENT);
@@ -71,6 +73,8 @@ public class AlarmNotification extends BroadcastReceiver {
     String _content = "What day is it?";
     Bundle extras = new Bundle();
     extras.putString(Constants.EXTRA_URI, itemUri);
+    extras.putInt(Constants.EXTRA_VOLUME, volume);
+    extras.putInt(Constants.EXTRA_RAW_TIME, rawTime);
     Notification notification = getNotificationAction(context, alarmSound, _title, _content, action, extras);
 
     StatusBarNotification[] notifications = notificationManager.getActiveNotifications();

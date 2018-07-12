@@ -1,16 +1,21 @@
 package com.idesign.okalarm;
 
+import android.app.job.JobInfo;
+import android.app.job.JobScheduler;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.media.Ringtone;
+import android.os.PersistableBundle;
 import android.support.v4.content.LocalBroadcastManager;
 
 public class AlarmReceiver extends BroadcastReceiver {
 
   private static int isActivated = 0;
   private static int isRegistered = 0;
+
   public AlarmReceiver() {}
 
   public AlarmReceiver(int setToOne) {
@@ -45,10 +50,11 @@ public class AlarmReceiver extends BroadcastReceiver {
         int rawTime = intent.getIntExtra(Constants.EXTRA_RAW_TIME, 0);
         int volume = intent.getIntExtra(Constants.EXTRA_VOLUME, 0);
         Intent uiIntent = new Intent(Constants.ACTION_RECEIVE_ALARM);
+
+        uiIntent.putExtra(Constants.BOOT_TAG, Constants.RECEIVE_ALARM_TAG);
         uiIntent.putExtra(Constants.EXTRA_RINGTONE_TITLE, ringtoneTitle);
         uiIntent.putExtra(Constants.EXTRA_RAW_TIME, rawTime);
         uiIntent.putExtra(Constants.EXTRA_URI, itemUri);
-        uiIntent.putExtra(Constants.BOOT_TAG, Constants.RECEIVE_ALARM_TAG);
         uiIntent.putExtra(Constants.EXTRA_VOLUME, volume);
 
         startRingtoneService(context, itemUri, volume);
