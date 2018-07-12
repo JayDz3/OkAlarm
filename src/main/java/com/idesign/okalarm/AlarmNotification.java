@@ -34,6 +34,7 @@ public class AlarmNotification extends BroadcastReceiver {
   public void createNotificationChannel(Context context, Intent receivedIntent) {
     String ringtoneTitle = receivedIntent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE);
     String itemUri = receivedIntent.getStringExtra(Constants.EXTRA_URI);
+    int voluem =receivedIntent.getIntExtra(Constants.EXTRA_VOLUME, 0);
     String replyLabel = context.getResources().getString(R.string.reply_label);
     int rawTime = receivedIntent.getIntExtra(Constants.EXTRA_RAW_TIME, 0);
     int notificationId = 1;
@@ -56,6 +57,7 @@ public class AlarmNotification extends BroadcastReceiver {
     intent.putExtra(Constants.EXTRA_RINGTONE_TITLE, ringtoneTitle);
     intent.putExtra(Constants.EXTRA_URI, itemUri);
     intent.putExtra(Constants.EXTRA_RAW_TIME, rawTime);
+    intent.putExtra(Constants.EXTRA_VOLUME, voluem);
     intent.setFlags(Constants.FLAG_NEW_TASK| Constants.FLAG_CLEAR_TASK);
 
     PendingIntent pendingIntent = PendingIntent.getActivity(context.getApplicationContext(), Constants.NOTIFICATION_ALARM_REQUEST_CODE, intent, Constants.FLAG_UPDATE_CURRENT);

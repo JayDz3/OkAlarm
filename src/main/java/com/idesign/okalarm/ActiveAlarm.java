@@ -4,6 +4,7 @@ public class ActiveAlarm {
   private long _rawTime;
   private int _hour;
   private int _minute;
+  private int _volume;
   private String _am_pm;
   private String _date;
   private boolean _isActive;
@@ -11,10 +12,11 @@ public class ActiveAlarm {
   private String _title;
   private String _itemUri;
 
-  ActiveAlarm(long _rawTime, int _hour, int _minute, String _am_pm, String _date, boolean _isActive, boolean _hasPlayed, String _title, String _itemUri) {
+  ActiveAlarm(long _rawTime, int _hour, int _minute, int _volume, String _am_pm, String _date, boolean _isActive, boolean _hasPlayed, String _title, String _itemUri) {
     this._rawTime = _rawTime;
     this._hour = _hour;
     this._minute = _minute;
+    this._volume = _volume;
     this._am_pm = _am_pm;
     this._date = _date;
     this._isActive = _isActive;
@@ -34,6 +36,8 @@ public class ActiveAlarm {
   public void set_minute(int _minute) {
     this._minute = _minute;
   }
+
+  public void set_volume(int _volume) { this._volume = _volume; }
 
   public void set_am_pm(String _am_pm) {
     this._am_pm = _am_pm;
@@ -62,6 +66,8 @@ public class ActiveAlarm {
   public int get_minute() {
     return _minute;
   }
+
+  public int get_volume() { return _volume; }
 
   public String get_am_pm() {
     return _am_pm;

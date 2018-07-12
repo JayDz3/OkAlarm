@@ -3,6 +3,7 @@ package com.idesign.okalarm;
 import android.app.TimePickerDialog;
 import android.arch.lifecycle.ViewModelProviders;
 import android.content.Context;
+import android.content.res.Configuration;
 import android.media.Ringtone;
 import android.os.Bundle;
 
@@ -18,6 +19,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.SeekBar;
 import android.widget.TimePicker;
 
 import com.idesign.okalarm.ViewModels.RingtonesViewModel;
@@ -30,6 +32,7 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
   Button submitButton;
   Button cancelButton;
   private TimePicker timePicker;
+  SeekBar seekBar;
   private int hourOfDay;
   private int minute;
   private String am_pm;
@@ -63,12 +66,14 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
     ringtonesViewModel.getRingtones().observe(this, items -> {
       alarmTypeAdapter.setItems(items);
     });
-    alarmTypeAdapter = new AlarmTypeAdapter(ringtonesViewModel.getRingtones().getValue(),AlarmFragment.this, this.getContext());
-  }
+    alarmTypeAdapter = new AlarmTypeAdapter(ringtonesViewModel.getRingtones().getValue(),AlarmFragment.this, this.getContext()); }
 
   @Override
   public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
 
+    seekBar = view.findViewById(R.id.fragment_volume_slider);
+    seekBar.setProgress(0);
+    seekBar.setOnSeekBarChangeListener(seekbarListener);
     recyclerView = view.findViewById(R.id.fragment_alarm_list);
     DividerItemDecoration itemDecoration = new DividerItemDecoration(view.getContext(), DividerItemDecoration.VERTICAL);
     recyclerView.setLayoutManager(new LinearLayoutManager(view.getContext()));
@@ -85,8 +90,23 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
       Log.d("INDEX", "idx: " + _activeIndex);
     }
     alarmTypeAdapter.setSelectedIndex(_activeIndex);
+    updateLayout(getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE);
+
   }
 
+  @Override
+  public void onConfigurationChanged(Configuration newConfig) {
+    super.onConfigurationChanged(newConfig);
+    updateLayout(newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE);
+  }
+
+  private void updateLayout(boolean isLandscape) {
+    if (isLandscape) {
+      timePicker.setVisibility(View.GONE);
+    } else {
+      timePicker.setVisibility(View.VISIBLE);
+    }
+  }
   public void setInitialTime() {
     Calendar c = Calendar.getInstance();
     this.hourOfDay = c.get(Calendar.HOUR_OF_DAY);
@@ -105,12 +125,25 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
     this.hourOfDay = timePicker.getHour();
     this.minute = timePicker.getMinute();
     Calendar dateTime = Calendar.getInstance();
+    int volume = seekBar.getProgress();
 
     dateTime.set(Calendar.HOUR_OF_DAY, this.hourOfDay);
     dateTime.set(Calendar.MINUTE, this.minute);
     this.am_pm = dateTime.get(Calendar.AM_PM) == Calendar.AM ? "AM" : "PM";
     int position = this.ringtone == null ? -1 : ringtonesViewModel.index(this.ringtone);
-    mListener.onSet(this.hourOfDay, this.minute, this.am_pm, position);
+    mListener.onSet(this.hourOfDay, this.minute, volume, this.am_pm, position);
+  }
+
+  private SeekBar.OnSeekBarChangeListener seekbarListener = new SeekBar.OnSeekBarChangeListener() {
+    public void onStartTrackingTouch(SeekBar seekBar) {}
+    public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+      updateTextSize(progress);
+    }
+    public void onStopTrackingTouch(SeekBar seekBar) {}
+  };
+
+  private void updateTextSize(int progress) {
+    Log.d("Alarm fragment", "volume: " + progress);
   }
 
   public void onSelectAlarm(Ringtone ringtone, final int position) {
@@ -141,7 +174,7 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
   }
 
   public interface OnAlarmSet {
-    void onSet(int hourOfDay, int minute, String am_pm, final int position);
+    void onSet(int hourOfDay, int minute, int volume, String am_pm, final int position);
     void onCancel();
   }
 

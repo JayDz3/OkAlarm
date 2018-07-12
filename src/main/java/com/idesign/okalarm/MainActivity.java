@@ -22,6 +22,7 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.icu.text.SimpleDateFormat;
+import android.media.AudioManager;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
@@ -181,10 +182,10 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
         fab.setVisibility(View.GONE);
       }
       // Removing stopRingtoneService from onDestroy fixes this issue
-      if (_activeUri != null && mFragment_int == 1) {
-       // startRingtoneService(this, _activeUri.toString());
-      //  goToPuzzleFragment();
-      }
+     /* if (_activeUri != null && mFragment_int == 1) {
+          startRingtoneService(this, _activeUri.toString());
+          goToPuzzleFragment();
+      } */
   }
 
   public String getNameOfDay() {
@@ -341,7 +342,7 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
   /*===========================*
    *  AlarmFragment Interface  *
    *===========================*/
-  public void onSet(int hourOfDay, int minute, String am_pm, final int position) {
+  public void onSet(int hourOfDay, int minute, int volume, String am_pm, final int position) {
     Calendar calendar = Calendar.getInstance();
     setCalendarValues(calendar, hourOfDay, minute);
     Calendar today = Calendar.getInstance();
@@ -370,7 +371,7 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
        itemUri = ringtoneManager.getRingtoneUri(position);
       }
 
-      ActiveAlarm activeAlarm = new ActiveAlarm(calendar.getTimeInMillis(), hour, calendar.get(Calendar.MINUTE), am_pm, _combined, true, false, _title, itemUri.toString());
+      ActiveAlarm activeAlarm = new ActiveAlarm(calendar.getTimeInMillis(), hour, calendar.get(Calendar.MINUTE), volume, am_pm, _combined, true, false, _title, itemUri.toString());
       _rawtime = activeAlarm.get_rawTime();
       addNewItem(activeAlarm);
       startIntent(activeAlarm);
@@ -474,6 +475,7 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
     intent.putExtra(Constants.EXTRA_RAW_TIME, time);
     intent.putExtra(Constants.BOOT_TAG, Constants.ALARM_CLASS_TAG);
     intent.putExtra(Constants.EXTRA_URI, activeAlarm.get_itemUri());
+    intent.putExtra(Constants.EXTRA_VOLUME, activeAlarm.get_volume());
     intent.setAction(Constants.ACTION_MANAGE_ALARM);
     pendingIntent = PendingIntent.getBroadcast(this, time, intent, 0);
   }
@@ -543,8 +545,12 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
           String ringtoneTitle = intent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE);
           String itemUri = intent.getStringExtra(Constants.EXTRA_URI);
           int time = intent.getIntExtra(Constants.EXTRA_RAW_TIME, 0);
+          int volume = intent.getIntExtra(Constants.EXTRA_VOLUME, 0);
           activeRingtone = RingtoneManager.getRingtone(context, Uri.parse(itemUri));
           _activeUri = Uri.parse(itemUri);
+          // AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+          // setVolumeControlStream(AudioManager.STREAM_ALARM);
+          // audioManager.setStreamVolume(AudioManager.STREAM_ALARM, volume, 0);
           goToPuzzleFragment();
         }
       }
