@@ -12,10 +12,8 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 
 import android.support.v7.widget.DividerItemDecoration;
-import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -24,9 +22,12 @@ import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TimePicker;
 
+import com.idesign.okalarm.ViewModels.ActiveAlarmsViewModel;
 import com.idesign.okalarm.ViewModels.RingtonesViewModel;
 
 import java.util.Calendar;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSetListener, AlarmTypeAdapter.OnAlarmTypeListener {
 
@@ -45,6 +46,7 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
 
   private OnAlarmSet mListener;
   private RingtonesViewModel ringtonesViewModel;
+  private ActiveAlarmsViewModel activeAlarmsViewModel;
 
   private String EXTRA_IDX = "extra.index";
   private int _activeIndex = -1;
@@ -64,38 +66,40 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-
+    activeAlarmsViewModel = ViewModelProviders.of(getActivity()).get(ActiveAlarmsViewModel.class);
     ringtonesViewModel = ViewModelProviders.of(getActivity()).get(RingtonesViewModel.class);
     ringtonesViewModel.getRingtones().observe(this, items -> {
       alarmTypeAdapter.setItems(items);
     });
-    alarmTypeAdapter = new AlarmTypeAdapter(ringtonesViewModel.getRingtones().getValue(),AlarmFragment.this, this.getContext()); }
+    alarmTypeAdapter = new AlarmTypeAdapter(ringtonesViewModel.getRingtones().getValue(),AlarmFragment.this, this.getContext());
+  }
 
   @Override
   public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
 
     seekBar = view.findViewById(R.id.fragment_volume_slider);
     muteImage = view.findViewById(R.id.fragment_mute_icon);
-
-    seekBar.setProgress(0);
-
-    AudioManager audioManager = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
-    seekBar.setMax(audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM));
-    seekBar.setOnSeekBarChangeListener(seekbarListener);
-    recyclerView = view.findViewById(R.id.fragment_alarm_list);
-    DividerItemDecoration itemDecoration = new DividerItemDecoration(view.getContext(), DividerItemDecoration.VERTICAL);
-    recyclerView.setLayoutManager(new LinearLayoutManager(view.getContext()));
-    recyclerView.addItemDecoration(itemDecoration);
-    recyclerView.setAdapter(alarmTypeAdapter);
     submitButton = view.findViewById(R.id.fragment_confirm_button);
     cancelButton = view.findViewById(R.id.fragment_cancel);
     timePicker = view.findViewById(R.id.fragment_time_picker);
     submitButton.setOnClickListener(l -> onTimeSet(timePicker, hourOfDay, minute));
     cancelButton.setOnClickListener(l -> mListener.onCancel());
+
+    AudioManager audioManager = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+
+    seekBar.setProgress(0);
+    seekBar.setMax(audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM));
+    seekBar.setOnSeekBarChangeListener(seekbarListener);
+
+    recyclerView = view.findViewById(R.id.fragment_alarm_list);
+    DividerItemDecoration itemDecoration = new DividerItemDecoration(view.getContext(), DividerItemDecoration.VERTICAL);
+    recyclerView.setLayoutManager(new LinearLayoutManager(view.getContext()));
+    recyclerView.addItemDecoration(itemDecoration);
+    recyclerView.setAdapter(alarmTypeAdapter);
+
     setInitialTime();
     if (savedInstanceState != null) {
       _activeIndex = savedInstanceState.getInt(EXTRA_IDX);
-      Log.d("INDEX", "idx: " + _activeIndex);
     }
     alarmTypeAdapter.setSelectedIndex(_activeIndex);
     updateLayout(getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE);
@@ -126,18 +130,26 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
     }
   }
 
-
   @Override
   public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
     _activeIndex = -1;
-    this.hourOfDay = timePicker.getHour();
-    this.minute = timePicker.getMinute();
-    Calendar dateTime = Calendar.getInstance();
     int volume = seekBar.getProgress();
 
-    dateTime.set(Calendar.HOUR_OF_DAY, this.hourOfDay);
-    dateTime.set(Calendar.MINUTE, this.minute);
-    this.am_pm = dateTime.get(Calendar.AM_PM) == Calendar.AM ? "AM" : "PM";
+    this.hourOfDay = timePicker.getHour();
+    this.minute = timePicker.getMinute();
+
+    Calendar calendar = Calendar.getInstance();
+
+    calendar.set(Calendar.HOUR_OF_DAY, this.hourOfDay);
+    calendar.set(Calendar.MINUTE, this.minute);
+    this.am_pm = calendar.get(Calendar.AM_PM) == Calendar.AM ? "AM" : "PM";
+
+    // check active alarms index of this time //
+    int idx = checkIndex(calendar.get(Calendar.HOUR), timePicker.getMinute(), calendar.get(Calendar.AM_PM));
+    if (idx > -1) {
+      mListener.onCancel();
+      return;
+    }
     int position = this.ringtone == null ? -1 : ringtonesViewModel.index(this.ringtone);
     mListener.onSet(this.hourOfDay, this.minute, volume, this.am_pm, position);
   }
@@ -147,8 +159,7 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
     public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
       updateView(progress);
     }
-    public void onStopTrackingTouch(SeekBar seekBar) {
-    }
+    public void onStopTrackingTouch(SeekBar seekBar) { }
   };
 
   private void updateView(int progress) {
@@ -157,6 +168,23 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
     } else {
       muteImage.setVisibility(View.INVISIBLE);
     }
+  }
+
+  public int checkIndex(int hour, int minute, int calendarAmPm) {
+    int idx = -1;
+    int formattedHour = hour == 0 ? 12 : hour;
+    Calendar calendar = Calendar.getInstance();
+    List<ActiveAlarm> filtered = activeAlarmsViewModel.getItems().getValue().stream()
+    .filter(i -> i.get_hour() == hour && i.get_minute() == minute)
+    .collect(Collectors.toList());
+
+    for (ActiveAlarm alarm : filtered) {
+      calendar.setTimeInMillis(alarm.get_rawTime());
+      if (alarm.get_hour() == formattedHour && alarm.get_minute() == minute && calendar.get(Calendar.AM_PM) == calendarAmPm) {
+          idx = 0;
+      }
+    }
+    return idx;
   }
 
 
@@ -179,6 +207,7 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
   public void onDetach() {
     super.onDetach();
     mListener = null;
+
   }
 
   @Override

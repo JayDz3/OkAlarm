@@ -28,10 +28,4 @@ public class ActiveAlarmsViewModel extends ViewModel {
     activeAlarms.getValue().remove(position);
   }
 
-  public void setActiveAlarms(List<ActiveAlarm> alarms) {
-    if (activeAlarms == null) {
-      activeAlarms = new MutableLiveData<>();
-    }
-    this.activeAlarms.setValue(alarms);
-  }
 }

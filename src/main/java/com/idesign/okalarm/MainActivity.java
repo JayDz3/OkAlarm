@@ -16,11 +16,11 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.icu.text.SimpleDateFormat;
 
+import android.media.AudioManager;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.Uri;
 
-import android.os.AsyncTask;
 import android.service.notification.StatusBarNotification;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
@@ -29,10 +29,10 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
-import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
+import com.idesign.okalarm.Interfaces.ActiveAlarmsFragmentListener;
 import com.idesign.okalarm.ViewModels.ActiveAlarmsViewModel;
 import com.idesign.okalarm.ViewModels.RingtonesViewModel;
 
@@ -44,7 +44,7 @@ import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity implements AlarmFragment.OnAlarmSet,
 PuzzleFragment.OnPuzzleListener,
-ActiveAlarmsFragment.ActiveAlarmFragmentListener {
+ActiveAlarmsFragmentListener {
 
   ActiveAlarmsFragment activeAlarmsFragment;
   AlarmFragment addAlarmFragment;
@@ -52,35 +52,20 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
   EmptyListFragment mEmptyListFragment;
   FloatingActionButton fab;
 
- IntentManager intentManager;
-
-  private AlarmManager alarmManager;
-  Ringtone activeRingtone;
-
+  IntentManager intentManager;
   Intent intent;
   PendingIntent pendingIntent;
 
-  private List<Long> times;
-
-  public static final String EXTRA_FRAGMENT_INT = "extra.fragment.integer";
-  public static final String EXTRA_HOUR = "extra.hour";
-  public static final String EXTRA_MINUTE = "extra.minute";
-  public static final String EXTRA_AM_PM = "extra.ampm";
-  public static final String EXTRA_RAW_TIME = "extra.rawtime";
-  public static final String EXTRA_RINGTONE_TITLE = "ringtone.title";
-
-  private int mFragment_int = -1;
-  private int _hour;
-  private int _minute;
-  private String _am_pm;
-  private long _rawtime;
-  boolean _isCorrect = false;
-  private Uri _activeUri;
-
-  RingtoneManager ringtoneManager;
+  private RingtoneManager ringtoneManager;
+  private AlarmManager alarmManager;
 
   private ActiveAlarmsViewModel model;
   private RingtonesViewModel ringtonesViewModel;
+  private int mFragment_int = -1;
+
+  public static final String EXTRA_FRAGMENT_INT = "extra.fragment.integer";
+
+  AudioManager audioManager;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -88,28 +73,29 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
     setContentView(R.layout.activity_main);
     model = ViewModelProviders.of(this).get(ActiveAlarmsViewModel.class);
     ringtonesViewModel = ViewModelProviders.of(this).get(RingtonesViewModel.class);
-
     fab = findViewById(R.id.main_fab);
     fab.setOnClickListener(l -> setFragment());
 
-    times = new ArrayList<>();
     List<Ringtone> mRingtones = new ArrayList<>();
 
     alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-
-
+    audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
     ringtoneManager = new RingtoneManager(MainActivity.this);
     Cursor cursor = ringtoneManager.getCursor();
 
     Intent getIntent = getIntent();
+
     if (savedInstanceState != null) {
       onInstanceStateNotNull(savedInstanceState);
     } else {
-      new MyAsyncTask(this, ringtoneManager, cursor, mRingtones).execute();
+      while (cursor.moveToNext()) {
+        int currentPos = cursor.getPosition();
+        Ringtone ringtone = ringtoneManager.getRingtone(currentPos);
+        mRingtones.add(ringtone);
+      }
       ringtonesViewModel.setRingtones(mRingtones);
 
-      StatusBarNotification[] notifications = getNotifications();
-      List<StatusBarNotification> appNotifications = myNotifications(notifications);
+      List<StatusBarNotification> appNotifications = myNotifications();
       boolean hasPendingNotifications = appNotifications.size() > 0;
 
       // Started from icon and no logged messages
@@ -124,7 +110,6 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
         Bundle _coldNotificationBundle = appNotifications.get(0).getNotification().extras;
         String _coldUri = _coldNotificationBundle.getString(Constants.EXTRA_URI);
         int volume = _coldNotificationBundle.getInt(Constants.EXTRA_VOLUME);
-        _activeUri = Uri.parse(_coldUri);
         onActiveAlarm(appNotifications, _coldUri, volume);
         return;
       }
@@ -135,9 +120,7 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
         String answer = getNameOfDay();
         String itemUri = getIntent.getStringExtra(Constants.EXTRA_URI);
         int volume = getIntent.getIntExtra(Constants.EXTRA_VOLUME, 0);
-        _activeUri = Uri.parse(itemUri);
-        _isCorrect = _message.equalsIgnoreCase(answer);
-        String result = _isCorrect ? "Correct!" : "Sorry, wrong day";
+        String result = _message.equalsIgnoreCase(answer) ? "Correct!" : "Sorry, wrong day";
         showToast(result);
         onActiveAlarm(appNotifications, itemUri, volume);
       }
@@ -147,11 +130,18 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
   /*=============================*
    *  ID is for JobService only  *
    *=============================*/
-  public void onActiveAlarm(List<StatusBarNotification> clearNotifications, String uri, int volume) {
-    broadcastCloseNotificationTray(clearNotifications);
+  public void onActiveAlarm(List<StatusBarNotification> notifications, String uri, int volume) {
+    clearNotifications(notifications);
+    closeNotificationTray();
     startRingtoneService(this, uri, volume);
     goToPuzzleFragment();
     disableNotificationService();
+  }
+
+  public void disableNotificationService() {
+    ComponentName receiver = new ComponentName(this, NotificationService.class);
+    PackageManager packageManager = this.getPackageManager();
+    packageManager.setComponentEnabledSetting(receiver, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
   }
 
   public void onInstanceStateNotNull(Bundle inState) {
@@ -162,11 +152,6 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
       } else {
         fab.setVisibility(View.GONE);
       }
-      // Removing stopRingtoneService from onDestroy fixes this issue
-     /* if (_activeUri != null && mFragment_int == 1) {
-          startRingtoneService(this, _activeUri.toString());
-          goToPuzzleFragment();
-      } */
   }
 
   public String getNameOfDay() {
@@ -178,59 +163,39 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
   public void clearNotifications(List<StatusBarNotification> notifications) {
     NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
     if (notificationManager != null) {
-      for (StatusBarNotification notification : notifications) {
-        notificationManager.cancel(notification.getId());
-      }
+      notifications.forEach(i -> notificationManager.cancel(i.getId()));
     }
   }
 
   private CharSequence getMessageText(Intent intent) {
     String KEY_TEXT_REPLY = "key.text.reply";
-    if (intent.getExtras() != null && intent.getStringExtra(Constants.EXTRA_RINGTONE_TITLE) != null) {
-      String itemUri = intent.getStringExtra(Constants.EXTRA_URI);
-      activeRingtone = RingtoneManager.getRingtone(this, Uri.parse(itemUri));
-    }
-
     Bundle remoteInput = RemoteInput.getResultsFromIntent(intent);
     if (remoteInput != null) {
       return remoteInput.getCharSequence(KEY_TEXT_REPLY);
+    } else {
+      return "";
     }
-    return null;
   }
 
-  public void broadcastCloseNotificationTray(List<StatusBarNotification> target) {
-    clearNotifications(target);
+  public void closeNotificationTray() {
     Intent closeIntent = new Intent(Constants.ACTION_CLOSE_DIALOGS);
     sendBroadcast(closeIntent);
   }
 
-  public StatusBarNotification[] getNotifications() {
+  public List<StatusBarNotification> myNotifications() {
     NotificationManager notificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
-    if (notificationManager != null) {
-      return notificationManager.getActiveNotifications();
-    } else {
-      return new StatusBarNotification[0];
-    }
-  }
-
-  public List<StatusBarNotification> myNotifications(StatusBarNotification[] allNotifications) {
     List<StatusBarNotification> appNotifications = new ArrayList<>();
-    for (StatusBarNotification notification : allNotifications) {
+    if (notificationManager == null) {
+      return appNotifications;
+    }
+
+    StatusBarNotification[] all = notificationManager.getActiveNotifications();
+    for (StatusBarNotification notification : all) {
       if (notification.getNotification().getChannelId().equalsIgnoreCase(Constants.NOTIFICATION_CHANNEL_ID)) {
         appNotifications.add(notification);
       }
     }
     return appNotifications;
-  }
-
-  public void disableNotificationService() {
-    ComponentName receiver = new ComponentName(this, NotificationService.class);
-    PackageManager packageManager = this.getPackageManager();
-    packageManager.setComponentEnabledSetting(receiver, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
-  }
-
-  public void showToast(CharSequence message) {
-    Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
   }
 
   public void toggleEmptyListFragment() {
@@ -262,8 +227,7 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
       return;
     }
     activeAlarmsFragment = ActiveAlarmsFragment.newInstance();
-    getSupportFragmentManager().beginTransaction()
-    .replace(R.id.main_frame_layout, activeAlarmsFragment).commit();
+    replaceFragment(activeAlarmsFragment);
     fab.setVisibility(View.VISIBLE);
   }
 
@@ -274,36 +238,29 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
       return;
     }
     addAlarmFragment = AlarmFragment.newInstance();
-    attachFragment(addAlarmFragment);
+    replaceFragment(addAlarmFragment);
   }
 
   /*===============================================*
    *  Alarm has gone off, attach Puzzle Fragment   *
    *===============================================*/
-  public void setFragment(int hourOfDay, int minute, String am_pm, long millis) {
-    // activeRingtone.play();
-    fab.setVisibility(View.GONE);
-    if (puzzleFragment != null && puzzleFragment.isVisible()) {
-      return;
-    }
-    puzzleFragment = PuzzleFragment.newInstance(hourOfDay, minute, am_pm);
-    _hour = hourOfDay;
-    _minute = minute;
-    _am_pm = am_pm;
-    _rawtime = millis;
-    attachFragment(puzzleFragment);
-  }
 
-  public void attachFragment(Fragment fragment) {
+  public void replaceFragment(Fragment fragment) {
     getSupportFragmentManager().beginTransaction()
     .replace(R.id.main_frame_layout, fragment).commit();
   }
 
   public void goToPuzzleFragment() {
+    mFragment_int = 1;
+    if (puzzleFragment != null && puzzleFragment.isVisible()) {
+      return;
+    }
+
     Calendar now = Calendar.getInstance();
     String am_pm_string = now.get(Calendar.AM_PM) == Calendar.AM ? "AM" : "PM";
-    mFragment_int = 1;
-    setFragment(now.get(Calendar.HOUR), now.get(Calendar.MINUTE), am_pm_string, now.getTimeInMillis());
+    fab.setVisibility(View.GONE);
+    puzzleFragment = PuzzleFragment.newInstance(now.get(Calendar.HOUR), now.get(Calendar.MINUTE), am_pm_string);
+    replaceFragment(puzzleFragment);
   }
 
   /*===========================*
@@ -312,38 +269,36 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
   public void onSet(int hourOfDay, int minute, int volume, String am_pm, final int position) {
     Calendar calendar = Calendar.getInstance();
     setCalendarValues(calendar, hourOfDay, minute);
-    Calendar today = Calendar.getInstance();
     long calMilliseconds = calendar.getTimeInMillis();
 
+    Calendar today = Calendar.getInstance();
     if (am_pm.equals("AM") && today.get(Calendar.AM_PM) != Calendar.AM || today.getTimeInMillis() > calMilliseconds) {
       calMilliseconds += (1000 * 60 * 60 * 24);
       calendar.setTimeInMillis(calMilliseconds);
     }
 
-    if (!times.contains(calendar.getTimeInMillis())) {
-      times.add(calendar.getTimeInMillis());
-      int baseHour = am_pm.equals("AM") ? calendar.get(Calendar.HOUR_OF_DAY) : calendar.get(Calendar.HOUR);
-      int hour = getHourByInteger(baseHour);
-      int _monthInt = calendar.get(Calendar.MONTH);
-      String _month = getMonth(_monthInt);
-      String _date = String.valueOf(calendar.get(Calendar.DAY_OF_MONTH));
-      String _combined = _month + " " + _date;
+    int baseHour = am_pm.equals("AM") ? calendar.get(Calendar.HOUR_OF_DAY) : calendar.get(Calendar.HOUR);
+    int hour = getHourByInteger(baseHour);
+    int _monthInt = calendar.get(Calendar.MONTH);
+    String _month = getMonth(_monthInt);
+    String _date = String.valueOf(calendar.get(Calendar.DAY_OF_MONTH));
+    String _combined = _month + " " + _date;
 
-      Ringtone ringtone = position == -1 ? null : ringtonesViewModel.selectedRingtone(position);
-      String _title = ringtone == null ? null : ringtone.getTitle(this);
-      Uri itemUri;
-      if (ringtone == null){
-        itemUri = RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM);
-      } else {
-       itemUri = ringtoneManager.getRingtoneUri(position);
-      }
+    Uri itemUri;
+    String _title;
 
-      ActiveAlarm activeAlarm = new ActiveAlarm(calendar.getTimeInMillis(), hour, calendar.get(Calendar.MINUTE), volume, am_pm, _combined, true, false, _title, itemUri.toString());
-      _rawtime = activeAlarm.get_rawTime();
-      addNewItem(activeAlarm);
-      startIntent(activeAlarm);
-      attachActiveAlarmsFragment();
+    if (position == -1) {
+      itemUri = RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM);
+      _title = null;
+    } else {
+      _title = ringtonesViewModel.selectedRingtone(position).getTitle(this);
+      itemUri = ringtoneManager.getRingtoneUri(position);
     }
+
+    ActiveAlarm activeAlarm = new ActiveAlarm(calendar.getTimeInMillis(), hour, calendar.get(Calendar.MINUTE), volume, am_pm, _combined, true, false, _title, itemUri.toString());
+    addNewItem(activeAlarm);
+    startIntent(activeAlarm);
+    attachActiveAlarmsFragment();
   }
 
   public void setCalendarValues(Calendar calendar, int hourOfDay, int minute) {
@@ -360,11 +315,6 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
   /*================================================*
    *  From AlarmFragment: cancel setting new alarm  *
    *================================================*/
-  public void onCancel() {
-    stopRingtoneService();
-    toggleEmptyListFragment();
-  }
-  // END AlarmFragment Interface //
 
   /*=============================================*
    *  Return string representation of month int  *
@@ -401,25 +351,12 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
   }
 
   public void addNewItem(ActiveAlarm activeAlarm) {
-    List<ActiveAlarm> target = model.getItems().getValue();
-    target.add(activeAlarm);
-    model.setActiveAlarms(sorted(target));
+    model.getItems().getValue().add(activeAlarm);
+    sortActiveAlarms();
   }
 
-  public List<ActiveAlarm> sorted(List<ActiveAlarm> source) {
-    source.sort((a, b) -> {
-      if (a.get_rawTime() < b.get_rawTime()) {
-        return -1;
-      }
-      if (a.get_rawTime() > b.get_rawTime()) {
-        return 1;
-      }
-      if (a.get_rawTime() == b.get_rawTime()) {
-        return 0;
-      }
-      return 0;
-    });
-    return source;
+  public void sortActiveAlarms() {
+    model.getItems().getValue().sort((a, b) -> Long.compare(a.get_rawTime(), b.get_rawTime()));
   }
 
   /*=======================*
@@ -453,7 +390,6 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
    *================================================*/
   public void onDeleteAlarm(final int position, long rawTime) {
     stopRingtoneService();
-    times.remove(rawTime);
     ActiveAlarm activeAlarm = model.selectedAlarm(position);
     cancelIntent(activeAlarm);
     model.removeAlarm(position);
@@ -475,12 +411,18 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
    *==========================*/
 
   public void onAnswer(int answer) {
-    stopRingtoneService();
     toggleEmptyListFragment();
+    stopRingtoneService();
   }
 
   public void onAnswer(String answer) {
+    toggleEmptyListFragment();
     stopRingtoneService();
+  }
+
+  public void onCancel() {
+    stopRingtoneService();
+    sortActiveAlarms();
     toggleEmptyListFragment();
   }
 
@@ -492,13 +434,8 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
     @Override
     public void onReceive(Context context, Intent intent) {
       int resultCode = intent.getIntExtra("resultCode", RESULT_CANCELED);
-      if (resultCode == RESULT_OK) {
-        if (intent.getAction() != null && intent.getAction().equalsIgnoreCase(Constants.ACTION_HANDLE_INTENT)) {
-          String itemUri = intent.getStringExtra(Constants.EXTRA_URI);
-          activeRingtone = RingtoneManager.getRingtone(context, Uri.parse(itemUri));
-          _activeUri = Uri.parse(itemUri);
-          goToPuzzleFragment();
-        }
+      if (resultCode == RESULT_OK && intent.getAction() != null && intent.getAction().equalsIgnoreCase(Constants.ACTION_HANDLE_INTENT)) {
+        goToPuzzleFragment();
       }
     }
   };
@@ -542,32 +479,17 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
   @Override
   public void onDestroy() {
     super.onDestroy();
-    // stopRingtoneService();
   }
 
   @Override
   public void onSaveInstanceState(Bundle outState) {
-    String ringtoneTitle = activeRingtone == null ? null : activeRingtone.getTitle(this);
-    String itemUri = _activeUri == null ? null : _activeUri.toString();
     outState.putInt(EXTRA_FRAGMENT_INT, mFragment_int);
-    outState.putInt(EXTRA_HOUR, _hour);
-    outState.putInt(EXTRA_MINUTE, _minute);
-    outState.putString(EXTRA_AM_PM, _am_pm);
-    outState.putLong(EXTRA_RAW_TIME, _rawtime);
-    outState.putString(EXTRA_RINGTONE_TITLE, ringtoneTitle);
-    outState.putString(Constants.EXTRA_URI, itemUri);
     super.onSaveInstanceState(outState);
   }
 
   public void getValuesFromBundle(Bundle savedInstanceState) {
     if (savedInstanceState.keySet().contains(EXTRA_FRAGMENT_INT)) {
       mFragment_int = savedInstanceState.getInt(EXTRA_FRAGMENT_INT);
-      _hour = savedInstanceState.getInt(EXTRA_HOUR);
-      _minute = savedInstanceState.getInt(EXTRA_MINUTE);
-      _am_pm = savedInstanceState.getString(EXTRA_AM_PM);
-      _rawtime = savedInstanceState.getLong(EXTRA_RAW_TIME);
-      String itemUri = savedInstanceState.getString(Constants.EXTRA_URI);
-      _activeUri = itemUri == null ? null : Uri.parse(itemUri);
     }
   }
 
@@ -583,5 +505,9 @@ ActiveAlarmsFragment.ActiveAlarmFragmentListener {
       return;
     }
     super.onBackPressed();
+  }
+
+  public void showToast(CharSequence message) {
+    Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
   }
 }

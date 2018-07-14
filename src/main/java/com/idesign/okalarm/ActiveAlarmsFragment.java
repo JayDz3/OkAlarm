@@ -12,13 +12,14 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.idesign.okalarm.Interfaces.ActiveAlarmsFragmentListener;
 import com.idesign.okalarm.ViewModels.ActiveAlarmsViewModel;
 
 public class ActiveAlarmsFragment extends Fragment implements ActiveAlarmsAdapter.OnActiveAlarmAdapterListener {
 
   RecyclerView mRecyclerView;
   private ActiveAlarmsAdapter mActiveAlarmsAdapter;
-  private ActiveAlarmFragmentListener mListener;
+  private ActiveAlarmsFragmentListener mListener;
 
   ActiveAlarmsViewModel model;
 
@@ -68,7 +69,7 @@ public class ActiveAlarmsFragment extends Fragment implements ActiveAlarmsAdapte
   public void onAttach(Context context) {
     super.onAttach(context);
     try {
-      mListener = (ActiveAlarmFragmentListener) context;
+      mListener = (ActiveAlarmsFragmentListener) context;
     } catch (ClassCastException e) {
       throw new ClassCastException(context.toString() + " Must implement OnActiveAlarmsListener");
     }
@@ -78,11 +79,6 @@ public class ActiveAlarmsFragment extends Fragment implements ActiveAlarmsAdapte
   public void onDetach() {
     super.onDetach();
     mListener = null;
-  }
-
-  public interface ActiveAlarmFragmentListener {
-    void onDeleteAlarm(final int position, long rawTime);
-    void onToggleAlarm(boolean isToggled, final int position);
   }
 
 }

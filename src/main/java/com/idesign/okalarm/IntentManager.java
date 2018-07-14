@@ -6,7 +6,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 
 public class IntentManager extends BroadcastReceiver {
-  static final int OFF = 0;;
+  private static final int OFF = 0;
   private static int APP_STATUS = 0;
 
   public IntentManager() {}
@@ -22,11 +22,10 @@ public class IntentManager extends BroadcastReceiver {
         createNotification(context, intent);
         return;
       }
-      startRingtoneServiceFromIntent(context, intent);
-      startUiServiceFromIntent(context, intent);
+      startRingtoneService(context, intent);
+      startUiService(context);
     }
   }
-
 
   public void activateNotificationService(Context context) {
     NotificationService notificationService = new NotificationService();
@@ -45,21 +44,15 @@ public class IntentManager extends BroadcastReceiver {
     context.sendBroadcast(notificationIntent);
   }
 
-  public void startRingtoneServiceFromIntent(Context context, Intent incoming) {
+  public void startRingtoneService(Context context, Intent incoming) {
     Intent ringtoneIntent = new Intent(context, RingtoneService.class);
     ringtoneIntent.putExtra(Constants.EXTRA_URI, incoming.getStringExtra(Constants.EXTRA_URI));
     ringtoneIntent.putExtra(Constants.EXTRA_VOLUME, incoming.getIntExtra(Constants.EXTRA_VOLUME, 0));
     context.startService(ringtoneIntent);
   }
 
-  public void startUiServiceFromIntent(Context context, Intent incoming) {
-    String ringtoneTitle = getTitle(incoming);
+  public void startUiService(Context context) {
     Intent updateUiIntent = new Intent(context, HandleBroadcastIntentService.class);
-    updateUiIntent.putExtra(Constants.BOOT_TAG, Constants.RECEIVE_ALARM_TAG);
-    updateUiIntent.putExtra(Constants.EXTRA_RINGTONE_TITLE, ringtoneTitle);
-    updateUiIntent.putExtra(Constants.EXTRA_URI, incoming.getStringExtra(Constants.EXTRA_URI));
-    updateUiIntent.putExtra(Constants.EXTRA_RAW_TIME, incoming.getIntExtra(Constants.EXTRA_RAW_TIME, 0));
-    updateUiIntent.putExtra(Constants.EXTRA_VOLUME, incoming.getIntExtra(Constants.EXTRA_VOLUME, 0));
     context.startService(updateUiIntent);
   }
 

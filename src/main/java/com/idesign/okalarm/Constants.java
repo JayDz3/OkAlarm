@@ -6,7 +6,6 @@ import android.content.Intent;
 public class Constants {
   public static final String NOTIFICATION_CLASS_TAG = "MyAlarmNotification";
   public static final String ALARM_CLASS_TAG = "Alarm Receiver";
-  public static final String RECEIVE_ALARM_TAG = "Receive Alarm";
 
   public static final String NOTIFICATION_DESCRIPTION = "alert alarms";
   public static final String NOTIFICATION_CHANNEL_ID = "101";

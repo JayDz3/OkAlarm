@@ -38,19 +38,6 @@ public class NotificationService extends BroadcastReceiver {
     int rawTime = receivedIntent.getIntExtra(Constants.EXTRA_RAW_TIME, 0);
     int notificationId = 1;
 
-    NotificationManagerCompat notificationManagerCompat = NotificationManagerCompat.from(context.getApplicationContext());
-    NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
-
-    if (notificationManager.getNotificationChannel(Constants.NOTIFICATION_CHANNEL_ID) == null) {
-      NotificationChannel channel = new NotificationChannel(Constants.NOTIFICATION_CHANNEL_ID, Constants.NOTIFICATION_CLASS_TAG, NotificationManager.IMPORTANCE_DEFAULT);
-      channel.setDescription(Constants.NOTIFICATION_DESCRIPTION);
-      notificationManager.createNotificationChannel(channel);
-    }
-
-    RemoteInput remoteInput = new RemoteInput.Builder(Constants.NOTIFICATION_KEY_TEXT_REPLY)
-    .setLabel(replyLabel)
-    .build();
-
     Intent intent = new Intent(context.getApplicationContext(), MainActivity.class);
     intent.putExtra(Constants.BOOT_TAG, Constants.NOTIFICATION_CLASS_TAG);
     intent.putExtra(Constants.EXTRA_RINGTONE_TITLE, ringtoneTitle);
@@ -59,7 +46,15 @@ public class NotificationService extends BroadcastReceiver {
     intent.putExtra(Constants.EXTRA_VOLUME, volume);
     intent.setFlags(Constants.FLAG_NEW_TASK| Constants.FLAG_CLEAR_TASK);
 
-    PendingIntent pendingIntent = PendingIntent.getActivity(context.getApplicationContext(), Constants.NOTIFICATION_ALARM_REQUEST_CODE, intent, Constants.FLAG_UPDATE_CURRENT);
+    final PendingIntent pendingIntent = PendingIntent.getActivity(context.getApplicationContext(), Constants.NOTIFICATION_ALARM_REQUEST_CODE, intent, Constants.FLAG_UPDATE_CURRENT);
+
+    final NotificationManagerCompat notificationManagerCompat = NotificationManagerCompat.from(context.getApplicationContext());
+    final NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
+
+    addChannel(notificationManager);
+
+    RemoteInput remoteInput = new RemoteInput.Builder(Constants.NOTIFICATION_KEY_TEXT_REPLY)
+    .setLabel(replyLabel).build();
 
     NotificationCompat.Action action = new NotificationCompat.Action.Builder(R.drawable.ic_add_alarm_black_24dp, Constants.NOTIFICATION_CLASS_TAG, pendingIntent)
     .addRemoteInput(remoteInput)
@@ -68,20 +63,29 @@ public class NotificationService extends BroadcastReceiver {
     Uri alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
     String _title = "Good Morning!";
     String _content = "What day is it?";
-    Bundle extras = new Bundle();
-    extras.putString(Constants.EXTRA_URI, itemUri);
-    extras.putInt(Constants.EXTRA_VOLUME, volume);
-    extras.putInt(Constants.EXTRA_RAW_TIME, rawTime);
-    Notification notification = getNotificationAction(context, alarmSound, _title, _content, action, extras);
+    Bundle notificationBundle = new Bundle();
+    notificationBundle.putString(Constants.EXTRA_URI, itemUri);
+    notificationBundle.putInt(Constants.EXTRA_VOLUME, volume);
+    notificationBundle.putInt(Constants.EXTRA_RAW_TIME, rawTime);
+    Notification notification = getNotificationAction(context, alarmSound, _title, _content, action, notificationBundle);
 
-    StatusBarNotification[] notifications = notificationManager.getActiveNotifications();
-    for (StatusBarNotification statusBarNotification : notifications) {
-      if (statusBarNotification.getNotification().getChannelId().equalsIgnoreCase(Constants.NOTIFICATION_CHANNEL_ID) && statusBarNotification.getId() == notificationId) {
-        notificationId += 1;
+    if (notificationManager != null) {
+      StatusBarNotification[] notifications = notificationManager.getActiveNotifications();
+      for (StatusBarNotification statusBarNotification : notifications) {
+        if (statusBarNotification.getNotification().getChannelId().equalsIgnoreCase(Constants.NOTIFICATION_CHANNEL_ID) && statusBarNotification.getId() == notificationId) {
+          notificationId += 1;
+        }
       }
     }
-
     notificationManagerCompat.notify(notificationId, notification);
+  }
+
+  public void addChannel(NotificationManager notificationManager) {
+    if (notificationManager.getNotificationChannel(Constants.NOTIFICATION_CHANNEL_ID) == null) {
+      NotificationChannel channel = new NotificationChannel(Constants.NOTIFICATION_CHANNEL_ID, Constants.NOTIFICATION_CLASS_TAG, NotificationManager.IMPORTANCE_DEFAULT);
+      channel.setDescription(Constants.NOTIFICATION_DESCRIPTION);
+      notificationManager.createNotificationChannel(channel);
+    }
   }
 
   public Notification getNotificationAction(Context context, Uri alarmSound, String _title, String _content, NotificationCompat.Action action, Bundle bundle) {
