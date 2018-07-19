@@ -12,6 +12,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.idesign.okalarm.Adapters.ActiveAlarmsAdapter;
 import com.idesign.okalarm.Interfaces.ActiveAlarmsFragmentListener;
 import com.idesign.okalarm.ViewModels.ActiveAlarmsViewModel;
 
@@ -32,11 +33,8 @@ public class ActiveAlarmsFragment extends Fragment implements ActiveAlarmsAdapte
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-
     model = ViewModelProviders.of(getActivity()).get(ActiveAlarmsViewModel.class);
-    model.getItems().observe(this, items -> {
-      mActiveAlarmsAdapter.setList(items);
-    });
+    model.getItems().observe(this, items -> mActiveAlarmsAdapter.setList(items));
     mActiveAlarmsAdapter = new ActiveAlarmsAdapter(model.getItems().getValue(),ActiveAlarmsFragment.this);
   }
 

@@ -1,4 +1,4 @@
-package com.idesign.okalarm;
+package com.idesign.okalarm.Adapters;
 
 import android.content.Context;
 import android.media.Ringtone;
@@ -8,7 +8,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.RadioButton;
-import android.widget.TextView;
+
+import com.idesign.okalarm.R;
 
 import java.util.List;
 
@@ -18,9 +19,10 @@ public class AlarmTypeAdapter extends RecyclerView.Adapter<AlarmTypeAdapter.Alar
   private OnAlarmTypeListener mListener;
   private Context context;
   private int _activeIndex  = -1;
+
   static class AlarmViewHolder extends RecyclerView.ViewHolder {
 
-    RadioButton _radioButton;
+    private RadioButton _radioButton;
 
     AlarmViewHolder(View view) {
       super(view);
@@ -28,7 +30,7 @@ public class AlarmTypeAdapter extends RecyclerView.Adapter<AlarmTypeAdapter.Alar
     }
   }
 
-  AlarmTypeAdapter(List<Ringtone> ringtones, OnAlarmTypeListener listener, Context context) {
+  public AlarmTypeAdapter(List<Ringtone> ringtones, OnAlarmTypeListener listener, Context context) {
     this.context = context;
     mRingtones = ringtones;
     setListener(listener);

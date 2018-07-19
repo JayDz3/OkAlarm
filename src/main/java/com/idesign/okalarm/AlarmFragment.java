@@ -22,9 +22,12 @@ import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TimePicker;
 
+import com.idesign.okalarm.Adapters.AlarmTypeAdapter;
+import com.idesign.okalarm.Factory.ActiveAlarm;
 import com.idesign.okalarm.ViewModels.ActiveAlarmsViewModel;
 import com.idesign.okalarm.ViewModels.RingtonesViewModel;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -32,23 +35,25 @@ import java.util.stream.Collectors;
 public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSetListener, AlarmTypeAdapter.OnAlarmTypeListener {
 
   RecyclerView recyclerView;
-  ImageView muteImage;
-  Button submitButton;
-  Button cancelButton;
+  private ImageView muteImage;
+  Button submitButton, cancelButton;
   private TimePicker timePicker;
-  SeekBar seekBar;
-  private int hourOfDay;
-  private int minute;
+  private SeekBar seekBar;
+  private int hourOfDay, minute;
   private String am_pm;
 
-  AlarmTypeAdapter alarmTypeAdapter;
+  private AlarmTypeAdapter alarmTypeAdapter;
   private Ringtone ringtone;
 
   private OnAlarmSet mListener;
   private RingtonesViewModel ringtonesViewModel;
   private ActiveAlarmsViewModel activeAlarmsViewModel;
+  private List<ActiveAlarm> activeAlarms;
 
-  private String EXTRA_IDX = "extra.index";
+  private static final String EXTRA_IDX = "extra.index";
+  private static final String EXTRA_TIMEPICKER_HOUR = "extra.hour";
+  private static final String EXTEA_TIMEPICKER_MINUTE = "extra.minute";
+
   private int _activeIndex = -1;
 
   public AlarmFragment() { }
@@ -66,11 +71,11 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+    activeAlarms = new ArrayList<>();
     activeAlarmsViewModel = ViewModelProviders.of(getActivity()).get(ActiveAlarmsViewModel.class);
+    activeAlarmsViewModel.getItems().observe(this, items -> activeAlarms = items);
     ringtonesViewModel = ViewModelProviders.of(getActivity()).get(RingtonesViewModel.class);
-    ringtonesViewModel.getRingtones().observe(this, items -> {
-      alarmTypeAdapter.setItems(items);
-    });
+    ringtonesViewModel.getRingtones().observe(this, items -> alarmTypeAdapter.setItems(items));
     alarmTypeAdapter = new AlarmTypeAdapter(ringtonesViewModel.getRingtones().getValue(),AlarmFragment.this, this.getContext());
   }
 
@@ -96,14 +101,17 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
     recyclerView.setLayoutManager(new LinearLayoutManager(view.getContext()));
     recyclerView.addItemDecoration(itemDecoration);
     recyclerView.setAdapter(alarmTypeAdapter);
-
     setInitialTime();
     if (savedInstanceState != null) {
       _activeIndex = savedInstanceState.getInt(EXTRA_IDX);
+      timePicker.setHour(savedInstanceState.getInt(EXTRA_TIMEPICKER_HOUR));
+      timePicker.setMinute(savedInstanceState.getInt(EXTEA_TIMEPICKER_MINUTE));
+    } else {
+      timePicker.setHour(6);
+      timePicker.setMinute(0);
     }
     alarmTypeAdapter.setSelectedIndex(_activeIndex);
     updateLayout(getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE);
-
   }
 
   @Override
@@ -119,6 +127,7 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
       timePicker.setVisibility(View.VISIBLE);
     }
   }
+
   public void setInitialTime() {
     Calendar c = Calendar.getInstance();
     this.hourOfDay = c.get(Calendar.HOUR_OF_DAY);
@@ -150,7 +159,7 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
       mListener.onCancel();
       return;
     }
-    int position = this.ringtone == null ? -1 : ringtonesViewModel.index(this.ringtone);
+    final int position = this.ringtone == null ? -1 : ringtonesViewModel.index(this.ringtone);
     mListener.onSet(this.hourOfDay, this.minute, volume, this.am_pm, position);
   }
 
@@ -174,7 +183,8 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
     int idx = -1;
     int formattedHour = hour == 0 ? 12 : hour;
     Calendar calendar = Calendar.getInstance();
-    List<ActiveAlarm> filtered = activeAlarmsViewModel.getItems().getValue().stream()
+
+    List<ActiveAlarm> filtered = activeAlarms.stream()
     .filter(i -> i.get_hour() == hour && i.get_minute() == minute)
     .collect(Collectors.toList());
 
@@ -207,12 +217,14 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
   public void onDetach() {
     super.onDetach();
     mListener = null;
-
   }
 
   @Override
   public void onSaveInstanceState(@NonNull Bundle outState) {
     outState.putInt(EXTRA_IDX, _activeIndex);
+    outState.putInt(EXTRA_TIMEPICKER_HOUR, timePicker.getHour());
+    outState.putInt(EXTEA_TIMEPICKER_MINUTE, timePicker.getMinute());
+
     super.onSaveInstanceState(outState);
   }
 

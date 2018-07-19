@@ -1,4 +1,4 @@
-package com.idesign.okalarm;
+package com.idesign.okalarm.Adapters;
 
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
@@ -8,6 +8,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
+
+import com.idesign.okalarm.Factory.ActiveAlarm;
+import com.idesign.okalarm.R;
 
 import java.util.List;
 
@@ -32,7 +35,7 @@ public class ActiveAlarmsAdapter extends RecyclerView.Adapter<ActiveAlarmsAdapte
     }
   }
 
-  ActiveAlarmsAdapter(List<ActiveAlarm> times, OnActiveAlarmAdapterListener listener) {
+   public ActiveAlarmsAdapter(List<ActiveAlarm> times, OnActiveAlarmAdapterListener listener) {
     this.activeAlarms = times;
     setListener(listener);
   }
@@ -46,10 +49,6 @@ public class ActiveAlarmsAdapter extends RecyclerView.Adapter<ActiveAlarmsAdapte
   public void setList(List<ActiveAlarm> times) {
     this.activeAlarms = times;
     notifyDataSetChanged();
-  }
-
-  public List<ActiveAlarm> getItems() {
-    return activeAlarms;
   }
 
   @Override

@@ -4,7 +4,7 @@ import android.arch.lifecycle.LiveData;
 import android.arch.lifecycle.MutableLiveData;
 import android.arch.lifecycle.ViewModel;
 
-import com.idesign.okalarm.ActiveAlarm;
+import com.idesign.okalarm.Factory.ActiveAlarm;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,6 +18,13 @@ public class ActiveAlarmsViewModel extends ViewModel {
       activeAlarms.setValue(new ArrayList<>());
     }
     return activeAlarms;
+  }
+
+  public void addActiveAlarm(ActiveAlarm activeAlarm) {
+    if (activeAlarms == null) {
+      activeAlarms = new MutableLiveData<>();
+    }
+    activeAlarms.getValue().add(activeAlarm);
   }
 
   public ActiveAlarm selectedAlarm(int position) {

@@ -12,9 +12,6 @@ public class Constants {
   public static final int NOTIFICATION_ALARM_REQUEST_CODE = 101;
   public static final String NOTIFICATION_KEY_TEXT_REPLY = "key.text.reply";
 
-  public static final String ALARM_CHANNEL_ID = "102";
-  public static final int ALARM_REQUEST_CODE = 102;
-
   public static final String BOOT_TAG = "boot.tag";
 
   // Intent Flag integers //
@@ -26,10 +23,8 @@ public class Constants {
 
   // Action Strings //
   public static final String ACTION_HANDLE_NOTIFICATION = "com.idesign.okalarm.HandleNotification";
-  public static final String ACTION_BOOT_COMPLETED = Intent.ACTION_BOOT_COMPLETED;
   public static final String ACTION_CLOSE_DIALOGS = Intent.ACTION_CLOSE_SYSTEM_DIALOGS;
   public static final String ACTION_MANAGE_ALARM = "com.idesign.okalarm.ManageAlarm";
-  public static final String ACTION_RECEIVE_ALARM = "com.idesign.okalarm.ReceiveAlarm";
   public static final String ACTION_HANDLE_INTENT = "com.idesign.okalarm.HandleIntent";
 
   public static final String EXTRA_RINGTONE_TITLE = "ringtone.title";
@@ -38,7 +33,5 @@ public class Constants {
   public static final String EXTRA_VOLUME = "extra.volume";
 
   public static final String NO_RINGTONE = "None";
-
-  public static final int REQUEST_STORAGE_PERMISSION = 103;
 
 }

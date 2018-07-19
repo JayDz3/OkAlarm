@@ -1,4 +1,4 @@
-package com.idesign.okalarm;
+package com.idesign.okalarm.Factory;
 
 public class ActiveAlarm {
   private long _rawTime;
