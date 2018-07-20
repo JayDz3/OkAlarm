@@ -1,13 +1,17 @@
-package com.idesign.okalarm;
+package com.idesign.okalarm.Fragments;
 
 import android.app.TimePickerDialog;
 import android.arch.lifecycle.ViewModelProviders;
 import android.content.Context;
 import android.content.res.Configuration;
+import android.database.Cursor;
 import android.media.AudioManager;
 import android.media.Ringtone;
+import android.media.RingtoneManager;
+import android.net.Uri;
 import android.os.Bundle;
 
+import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 
@@ -21,9 +25,11 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TimePicker;
+import android.widget.Toast;
 
 import com.idesign.okalarm.Adapters.AlarmTypeAdapter;
 import com.idesign.okalarm.Factory.ActiveAlarm;
+import com.idesign.okalarm.R;
 import com.idesign.okalarm.ViewModels.ActiveAlarmsViewModel;
 import com.idesign.okalarm.ViewModels.RingtonesViewModel;
 
@@ -47,7 +53,7 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
 
   private OnAlarmSet mListener;
   private RingtonesViewModel ringtonesViewModel;
-  private ActiveAlarmsViewModel activeAlarmsViewModel;
+  ActiveAlarmsViewModel activeAlarmsViewModel;
   private List<ActiveAlarm> activeAlarms;
 
   private static final String EXTRA_IDX = "extra.index";
@@ -90,7 +96,7 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
     submitButton.setOnClickListener(l -> onTimeSet(timePicker, hourOfDay, minute));
     cancelButton.setOnClickListener(l -> mListener.onCancel());
 
-    AudioManager audioManager = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+    final AudioManager audioManager = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
 
     seekBar.setProgress(0);
     seekBar.setMax(audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM));

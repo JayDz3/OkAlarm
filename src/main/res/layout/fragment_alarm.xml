@@ -6,7 +6,7 @@
     android:tag="@string/fragment_tag_alarm_fragment"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".AlarmFragment">
+    tools:context=".Fragments.AlarmFragment">
 
     <Button
         android:id="@+id/fragment_cancel"

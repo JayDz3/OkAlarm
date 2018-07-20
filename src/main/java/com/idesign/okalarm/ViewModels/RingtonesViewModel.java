@@ -13,22 +13,24 @@ public class RingtonesViewModel extends ViewModel {
   private MutableLiveData<List<Ringtone>> mRingtones;
 
   public LiveData<List<Ringtone>> getRingtones() {
-    if (mRingtones == null) {
-      mRingtones = new MutableLiveData<>();
-      mRingtones.setValue(new ArrayList<>());
-    }
+    ifNull();
     return mRingtones;
   }
 
   public void setRingtones(List<Ringtone> ringtones) {
-    if (mRingtones == null) {
-      mRingtones = new MutableLiveData<>();
-    }
+    ifNull();
     this.mRingtones.setValue(ringtones);
   }
 
-  public Ringtone selectedRingtone(int position) {
-    return mRingtones.getValue().get(position);
+  public void postRingtones(List<Ringtone> ringtones) {
+    ifNull();
+    mRingtones.postValue(ringtones);
+  }
+  private void ifNull() {
+    if (mRingtones == null) {
+      mRingtones = new MutableLiveData<>();
+      mRingtones.setValue(new ArrayList<>());
+    }
   }
 
   public int index(Ringtone ringtone) {

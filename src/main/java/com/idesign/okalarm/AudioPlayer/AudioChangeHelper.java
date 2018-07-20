@@ -21,6 +21,7 @@ public class AudioChangeHelper implements AudioManager.OnAudioFocusChangeListene
   public void assignRingtone(final Ringtone ringtone) {
     if (mRingtonePlayer != null) {
       mRingtonePlayer.stop();
+      mRingtonePlayer = null;
     }
     mRingtonePlayer = new RingtonePlayer(ringtone);
   }

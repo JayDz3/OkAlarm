@@ -6,7 +6,7 @@
     android:tag="@string/fragment_tag_puzzle_fragment"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".PuzzleFragment">
+    tools:context=".Fragments.PuzzleFragment">
 
     <TextView
         android:id="@+id/puzzle_welcome_string"

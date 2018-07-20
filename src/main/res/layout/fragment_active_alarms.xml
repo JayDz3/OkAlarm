@@ -6,7 +6,7 @@
     android:tag="@string/fragment_tag_activeAlarms_fragment"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ActiveAlarmsFragment">
+    tools:context=".Fragments.ActiveAlarmsFragment">
 
     <android.support.v7.widget.RecyclerView
         android:id="@+id/active_alarms_recycler_view"

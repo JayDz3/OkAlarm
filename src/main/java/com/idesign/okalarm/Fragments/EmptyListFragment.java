@@ -1,4 +1,4 @@
-package com.idesign.okalarm;
+package com.idesign.okalarm.Fragments;
 
 
 import android.os.Bundle;
@@ -8,12 +8,14 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.idesign.okalarm.R;
+
 public class EmptyListFragment extends Fragment  {
 
 
   public EmptyListFragment() { }
 
-  static  EmptyListFragment newInstance() {
+  public static EmptyListFragment newInstance() {
     return new EmptyListFragment();
   }
 

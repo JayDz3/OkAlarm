@@ -1,4 +1,4 @@
-package com.idesign.okalarm;
+package com.idesign.okalarm.Fragments;
 
 import android.arch.lifecycle.ViewModelProviders;
 import android.content.Context;
@@ -14,6 +14,7 @@ import android.view.ViewGroup;
 
 import com.idesign.okalarm.Adapters.ActiveAlarmsAdapter;
 import com.idesign.okalarm.Interfaces.ActiveAlarmsFragmentListener;
+import com.idesign.okalarm.R;
 import com.idesign.okalarm.ViewModels.ActiveAlarmsViewModel;
 
 public class ActiveAlarmsFragment extends Fragment implements ActiveAlarmsAdapter.OnActiveAlarmAdapterListener {
