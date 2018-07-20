@@ -172,7 +172,7 @@ ActiveAlarmsFragmentListener {
     final List<SystemAlarm> alarms = new ArrayList<>();
     if (observable == null || observable.isDisposed()) {
       observable =  Observable.just(mCursor)
-      .observeOn(Schedulers.io())
+      .observeOn(Schedulers.computation())
       .map((cursor) -> {
         while (cursor.moveToNext()) {
           final int pos = cursor.getPosition();

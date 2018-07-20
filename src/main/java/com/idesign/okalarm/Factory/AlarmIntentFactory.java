@@ -1,6 +1,9 @@
 package com.idesign.okalarm.Factory;
 
+import android.util.Log;
+
 import java.util.Calendar;
+import java.util.TimeZone;
 
 public class AlarmIntentFactory {
 
@@ -8,12 +11,13 @@ public class AlarmIntentFactory {
 
   public final ActiveAlarm activeAlarm(int hourOfDay, int minute, int volume, String am_pm, String _title, String uriString) {
     final Calendar calendar = Calendar.getInstance();
-    final Calendar today = Calendar.getInstance();
+    TimeZone timeZone = TimeZone.getDefault();
+    final Calendar today = Calendar.getInstance(timeZone);
 
     setCalendarValues(calendar, hourOfDay, minute);
     long calMilliseconds = calendar.getTimeInMillis();
 
-    if (am_pm.equals("AM") && today.get(Calendar.AM_PM) != Calendar.AM || today.getTimeInMillis() > calMilliseconds) {
+    if (am_pm.equals("AM") && today.get(Calendar.AM_PM) != Calendar.AM) {
       calMilliseconds += (1000 * 60 * 60 * 24);
       calendar.setTimeInMillis(calMilliseconds);
     }
