@@ -1,5 +1,6 @@
 package com.idesign.okalarm;
 
+import android.Manifest;
 import android.app.AlarmManager;
 
 import android.app.NotificationManager;
@@ -20,14 +21,16 @@ import android.media.RingtoneManager;
 
 import android.os.Handler;
 import android.service.notification.StatusBarNotification;
+import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
-import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
@@ -86,6 +89,7 @@ ActiveAlarmsFragmentListener {
   // private final CompositeDisposable compositeDisposable = new CompositeDisposable();
 
   public static final String EXTRA_FRAGMENT_INT = "extra.fragment.integer";
+  public static final int STORAGE_PERMISSION_CODE = 104;
 
 
   @Override
@@ -110,12 +114,33 @@ ActiveAlarmsFragmentListener {
     fab.setOnClickListener(l -> setFragment());
 
     Intent getIntent = getIntent();
-    observeCursor();
+    getStoragePermission();
 
     if (savedInstanceState != null) {
       onInstanceStateNotNull(savedInstanceState);
     } else {
       onInstanceStateIsNull(getIntent);
+    }
+  }
+
+  public void getStoragePermission() {
+    if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+      ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, STORAGE_PERMISSION_CODE);
+    } else {
+      observeCursor();
+    }
+  }
+
+  @Override
+  public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+    switch (requestCode) {
+      case STORAGE_PERMISSION_CODE:
+        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+          observeCursor();
+        } else {
+          observeCursor();
+        }
+        break;
     }
   }
 
@@ -184,7 +209,7 @@ ActiveAlarmsFragmentListener {
       .observeOn(AndroidSchedulers.mainThread())
       .subscribe(result -> systemAlarmsViewModel.setSystemAlarms(alarms),
          e -> toast("error: " + e.getMessage()),
-        () -> Log.d("MAIN ACTIVITY", "SUBSCRIPTION IS COMPLETE"));
+        () -> observable.dispose());
     }
   }
 

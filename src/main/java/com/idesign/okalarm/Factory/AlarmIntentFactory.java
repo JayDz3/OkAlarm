@@ -1,7 +1,5 @@
 package com.idesign.okalarm.Factory;
 
-import android.util.Log;
-
 import java.util.Calendar;
 import java.util.TimeZone;
 
