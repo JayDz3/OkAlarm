@@ -62,18 +62,17 @@ ActiveAlarmsFragmentListener {
   private AlarmFragment addAlarmFragment;
   private PuzzleFragment puzzleFragment;
   private EmptyListFragment mEmptyListFragment;
-  private FloatingActionButton fab;
 
   IntentManager intentManager;
-
   private PendingIntent pendingIntent;
 
   private RingtoneManager ringtoneManager;
+  private Cursor mCursor;
   private AlarmManager alarmManager;
+
   private AlarmIntentFactory alarmIntentFactory;
 
   private ActiveAlarmsViewModel activeAlarmsViewModel;
-
   private SystemAlarmsViewModel systemAlarmsViewModel;
 
   private int mFragment_int = -1;
@@ -81,7 +80,8 @@ ActiveAlarmsFragmentListener {
   private List<SystemAlarm> mSystemAlarms;
 
   private Disposable observable;
-  private Cursor mCursor;
+
+  private FloatingActionButton fab;
 
   // private final CompositeDisposable compositeDisposable = new CompositeDisposable();
 
@@ -94,8 +94,12 @@ ActiveAlarmsFragmentListener {
     setContentView(R.layout.activity_main);
 
     mSystemAlarms = new ArrayList<>();
+
     ringtoneManager = new RingtoneManager(MainActivity.this);
     mCursor = ringtoneManager.getCursor();
+
+    alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+    alarmIntentFactory = new AlarmIntentFactory();
 
     activeAlarmsViewModel = ViewModelProviders.of(this).get(ActiveAlarmsViewModel.class);
 
@@ -105,11 +109,8 @@ ActiveAlarmsFragmentListener {
     fab = findViewById(R.id.main_fab);
     fab.setOnClickListener(l -> setFragment());
 
-    alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-    alarmIntentFactory = new AlarmIntentFactory();
     Intent getIntent = getIntent();
-
-    observeToCursor();
+    observeCursor();
 
     if (savedInstanceState != null) {
       onInstanceStateNotNull(savedInstanceState);
@@ -164,32 +165,31 @@ ActiveAlarmsFragmentListener {
     }
   }
 
-  public void observeToCursor() {
+  /*=========================================================================*
+   *  Working on background thread not throwing error on orientation change  *
+   *=========================================================================*/
+  public void observeCursor() {
     final List<SystemAlarm> alarms = new ArrayList<>();
-    /*=========================================================================*
-     *  Working on background thread not throwing error on orientation change  *
-     *=========================================================================*/
     if (observable == null || observable.isDisposed()) {
-      observable = Observable.just(mCursor)
+      observable =  Observable.just(mCursor)
       .observeOn(Schedulers.io())
-      .map((c) -> {
-
-        while (c.moveToNext()) {
-          final int pos = c.getPosition();
-          SystemAlarm systemAlarm = new SystemAlarm(ringtoneManager.getRingtone(pos).getTitle(getBaseContext()), ringtoneManager.getRingtoneUri(pos).toString());
+      .map((cursor) -> {
+        while (cursor.moveToNext()) {
+          final int pos = cursor.getPosition();
+          final SystemAlarm systemAlarm = new SystemAlarm(ringtoneManager.getRingtone(pos).getTitle(getBaseContext()), ringtoneManager.getRingtoneUri(pos).toString());
           alarms.add(systemAlarm);
         }
         return alarms;
       })
       .observeOn(AndroidSchedulers.mainThread())
       .subscribe(result -> systemAlarmsViewModel.setSystemAlarms(alarms),
-       e -> toast("error: " + e.getMessage()),
-      () -> Log.d("MAIN ACTIVITY", "SUBSCRIPTION IS COMPLETE"));
+         e -> toast("error: " + e.getMessage()),
+        () -> Log.d("MAIN ACTIVITY", "SUBSCRIPTION IS COMPLETE"));
     }
   }
 
   /*=============================*
-   *  ID is for JobService only  *
+   *       Activate alarm        *
    *=============================*/
   public void onActiveAlarm(List<StatusBarNotification> notifications, String uri, int volume) {
     clearNotifications(notifications);
@@ -199,32 +199,19 @@ ActiveAlarmsFragmentListener {
     disableNotificationService();
   }
 
+  /*===================*
+   *   Notifications   *
+   *===================*/
   public void disableNotificationService() {
     ComponentName receiver = new ComponentName(this, NotificationService.class);
     PackageManager packageManager = this.getPackageManager();
     packageManager.setComponentEnabledSetting(receiver, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
   }
 
-  public String getNameOfDay() {
-    Calendar calendar = Calendar.getInstance();
-    Date date = calendar.getTime();
-    return new SimpleDateFormat("EEEE", Locale.ENGLISH).format(date.getTime());
-  }
-
   public void clearNotifications(List<StatusBarNotification> notifications) {
     NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
     if (notificationManager != null) {
       notifications.forEach(i -> notificationManager.cancel(i.getId()));
-    }
-  }
-
-  private CharSequence getMessageText(Intent intent) {
-    String KEY_TEXT_REPLY = "key.text.reply";
-    Bundle remoteInput = RemoteInput.getResultsFromIntent(intent);
-    if (remoteInput != null) {
-      return remoteInput.getCharSequence(KEY_TEXT_REPLY);
-    } else {
-      return "";
     }
   }
 
@@ -246,6 +233,25 @@ ActiveAlarmsFragmentListener {
       }
     }
     return appNotifications;
+  }
+
+  /*=========================*
+   *  Remote Input Response  *
+   *=========================*/
+  private CharSequence getMessageText(Intent intent) {
+    String KEY_TEXT_REPLY = "key.text.reply";
+    Bundle remoteInput = RemoteInput.getResultsFromIntent(intent);
+    if (remoteInput != null) {
+      return remoteInput.getCharSequence(KEY_TEXT_REPLY);
+    } else {
+      return "";
+    }
+  }
+
+  public String getNameOfDay() {
+    Calendar calendar = Calendar.getInstance();
+    Date date = calendar.getTime();
+    return new SimpleDateFormat("EEEE", Locale.ENGLISH).format(date.getTime());
   }
 
   public void toggleEmptyListFragment() {
@@ -310,7 +316,6 @@ ActiveAlarmsFragmentListener {
   /*===============================================*
    *  Alarm has gone off, attach Puzzle Fragment   *
    *===============================================*/
-
   public void replaceFragment(Fragment fragment) {
     getSupportFragmentManager().beginTransaction()
     .replace(R.id.main_frame_layout, fragment).commit();
@@ -393,7 +398,6 @@ ActiveAlarmsFragmentListener {
   /*==========================*
    *   From Puzzle Fragment   *
    *==========================*/
-
   public void onAnswer(int answer) {
     toggleEmptyListFragment();
     stopRingtoneService();
@@ -436,6 +440,9 @@ ActiveAlarmsFragmentListener {
     stopService(i);
   }
 
+  /*=======================*
+   *  Top Level Overrides  *
+   *=======================*/
   @Override
   protected void onStart() {
     super.onStart();
@@ -497,7 +504,6 @@ ActiveAlarmsFragmentListener {
   }
 
   final Handler mHandler = new Handler();
-
   void toast(String message) {
     mHandler.post(() -> Toast.makeText(getBaseContext(), message, Toast.LENGTH_SHORT).show());
   }
