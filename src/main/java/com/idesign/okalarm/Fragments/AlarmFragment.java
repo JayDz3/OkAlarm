@@ -4,14 +4,9 @@ import android.app.TimePickerDialog;
 import android.arch.lifecycle.ViewModelProviders;
 import android.content.Context;
 import android.content.res.Configuration;
-import android.database.Cursor;
 import android.media.AudioManager;
-import android.media.Ringtone;
-import android.media.RingtoneManager;
-import android.net.Uri;
 import android.os.Bundle;
 
-import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 
@@ -25,13 +20,13 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TimePicker;
-import android.widget.Toast;
 
 import com.idesign.okalarm.Adapters.AlarmTypeAdapter;
 import com.idesign.okalarm.Factory.ActiveAlarm;
+import com.idesign.okalarm.Factory.SystemAlarm;
 import com.idesign.okalarm.R;
 import com.idesign.okalarm.ViewModels.ActiveAlarmsViewModel;
-import com.idesign.okalarm.ViewModels.RingtonesViewModel;
+import com.idesign.okalarm.ViewModels.SystemAlarmsViewModel;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -43,18 +38,22 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
   RecyclerView recyclerView;
   private ImageView muteImage;
   Button submitButton, cancelButton;
+
   private TimePicker timePicker;
   private SeekBar seekBar;
+
   private int hourOfDay, minute;
   private String am_pm;
 
   private AlarmTypeAdapter alarmTypeAdapter;
-  private Ringtone ringtone;
+  private SystemAlarm ringtone;
 
   private OnAlarmSet mListener;
-  private RingtonesViewModel ringtonesViewModel;
   ActiveAlarmsViewModel activeAlarmsViewModel;
+  private SystemAlarmsViewModel systemAlarmsViewModel;
+
   private List<ActiveAlarm> activeAlarms;
+  List<SystemAlarm> mSystemAlarms;
 
   private static final String EXTRA_IDX = "extra.index";
   private static final String EXTRA_TIMEPICKER_HOUR = "extra.hour";
@@ -78,11 +77,15 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     activeAlarms = new ArrayList<>();
+    mSystemAlarms = new ArrayList<>();
+
     activeAlarmsViewModel = ViewModelProviders.of(getActivity()).get(ActiveAlarmsViewModel.class);
     activeAlarmsViewModel.getItems().observe(this, items -> activeAlarms = items);
-    ringtonesViewModel = ViewModelProviders.of(getActivity()).get(RingtonesViewModel.class);
-    ringtonesViewModel.getRingtones().observe(this, items -> alarmTypeAdapter.setItems(items));
-    alarmTypeAdapter = new AlarmTypeAdapter(ringtonesViewModel.getRingtones().getValue(),AlarmFragment.this, this.getContext());
+
+    systemAlarmsViewModel = ViewModelProviders.of(getActivity()).get(SystemAlarmsViewModel.class);
+    systemAlarmsViewModel.getItems().observe(this, items -> alarmTypeAdapter.setItems(items));
+
+    alarmTypeAdapter = new AlarmTypeAdapter(systemAlarmsViewModel.getItems().getValue(),AlarmFragment.this);
   }
 
   @Override
@@ -165,7 +168,7 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
       mListener.onCancel();
       return;
     }
-    final int position = this.ringtone == null ? -1 : ringtonesViewModel.index(this.ringtone);
+    final int position = this.ringtone == null ? -1 : systemAlarmsViewModel.index(this.ringtone);
     mListener.onSet(this.hourOfDay, this.minute, volume, this.am_pm, position);
   }
 
@@ -204,8 +207,8 @@ public class AlarmFragment extends Fragment implements TimePickerDialog.OnTimeSe
   }
 
 
-  public void onSelectAlarm(Ringtone ringtone, final int position) {
-    this.ringtone = ringtone;
+  public void onSelectAlarm(SystemAlarm systemAlarm, final int position) {
+    this.ringtone = systemAlarm;
     _activeIndex = position;
   }
 

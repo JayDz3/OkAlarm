@@ -1,7 +1,5 @@
 package com.idesign.okalarm.Adapters;
 
-import android.content.Context;
-import android.media.Ringtone;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -9,15 +7,15 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.RadioButton;
 
+import com.idesign.okalarm.Factory.SystemAlarm;
 import com.idesign.okalarm.R;
 
 import java.util.List;
 
 public class AlarmTypeAdapter extends RecyclerView.Adapter<AlarmTypeAdapter.AlarmViewHolder> {
 
-  private List<Ringtone> mRingtones;
+  private List<SystemAlarm> mRingtones;
   private OnAlarmTypeListener mListener;
-  private Context context;
   private int _activeIndex  = -1;
 
   static class AlarmViewHolder extends RecyclerView.ViewHolder {
@@ -30,8 +28,7 @@ public class AlarmTypeAdapter extends RecyclerView.Adapter<AlarmTypeAdapter.Alar
     }
   }
 
-  public AlarmTypeAdapter(List<Ringtone> ringtones, OnAlarmTypeListener listener, Context context) {
-    this.context = context;
+  public AlarmTypeAdapter(List<SystemAlarm> ringtones, OnAlarmTypeListener listener) {
     mRingtones = ringtones;
     setListener(listener);
   }
@@ -42,7 +39,7 @@ public class AlarmTypeAdapter extends RecyclerView.Adapter<AlarmTypeAdapter.Alar
     }
   }
 
-  public void setItems(List<Ringtone> ringtones) {
+  public void setItems(List<SystemAlarm> ringtones) {
     mRingtones = ringtones;
     notifyDataSetChanged();
   }
@@ -60,9 +57,9 @@ public class AlarmTypeAdapter extends RecyclerView.Adapter<AlarmTypeAdapter.Alar
 
   @Override
   public void onBindViewHolder(@NonNull AlarmTypeAdapter.AlarmViewHolder viewHolder, final int position) {
-    final Ringtone ringtone = mRingtones.get(position);
-    viewHolder._radioButton.setText(ringtone.getTitle(context));
-    viewHolder._radioButton.setOnClickListener(l -> selectRingtone(ringtone, position));
+    final SystemAlarm systemAlarm = mRingtones.get(position);
+    viewHolder._radioButton.setText(systemAlarm.get_title());
+    viewHolder._radioButton.setOnClickListener(l -> selectRingtone(systemAlarm, position));
     if (_activeIndex == position) {
       viewHolder._radioButton.setChecked(true);
     } else {
@@ -75,18 +72,18 @@ public class AlarmTypeAdapter extends RecyclerView.Adapter<AlarmTypeAdapter.Alar
     return mRingtones.size();
   }
 
-  private void selectRingtone(Ringtone ringtone, final int position) {
+  private void selectRingtone(SystemAlarm systemAlarm, final int position) {
     if (_activeIndex == position) {
       _activeIndex = -1;
-      ringtone = null;
+      systemAlarm = null;
     } else {
       _activeIndex = position;
     }
-    mListener.onSelectAlarm(ringtone, _activeIndex);
+    mListener.onSelectAlarm(systemAlarm, _activeIndex);
     notifyDataSetChanged();
   }
 
   public interface OnAlarmTypeListener {
-    void onSelectAlarm(Ringtone ringtone, final int position);
+    void onSelectAlarm(SystemAlarm systemAlarm, final int position);
   }
 }

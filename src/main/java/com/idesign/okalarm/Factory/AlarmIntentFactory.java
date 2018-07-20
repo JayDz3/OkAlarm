@@ -1,13 +1,12 @@
 package com.idesign.okalarm.Factory;
 
-import android.net.Uri;
 import java.util.Calendar;
 
 public class AlarmIntentFactory {
 
  public AlarmIntentFactory() { }
 
-  public final ActiveAlarm activeAlarm(int hourOfDay, int minute, int volume, String am_pm, String _title, Uri itemUri) {
+  public final ActiveAlarm activeAlarm(int hourOfDay, int minute, int volume, String am_pm, String _title, String uriString) {
     final Calendar calendar = Calendar.getInstance();
     final Calendar today = Calendar.getInstance();
 
@@ -24,7 +23,7 @@ public class AlarmIntentFactory {
     final String _month = getMonth(calendar.get(Calendar.MONTH));
     final String _date = String.valueOf(calendar.get(Calendar.DAY_OF_MONTH));
     final String _combined = _month + " " + _date;
-    return new ActiveAlarm(calendar.getTimeInMillis(), hour, calendar.get(Calendar.MINUTE), volume, am_pm, _combined, true, false, _title, itemUri.toString());
+    return new ActiveAlarm(calendar.getTimeInMillis(), hour, calendar.get(Calendar.MINUTE), volume, am_pm, _combined, true, false, _title, uriString);
   }
 
 

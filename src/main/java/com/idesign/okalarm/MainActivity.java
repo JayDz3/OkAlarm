@@ -16,10 +16,8 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.icu.text.SimpleDateFormat;
 
-import android.media.Ringtone;
 import android.media.RingtoneManager;
 
-import android.net.Uri;
 import android.os.Handler;
 import android.service.notification.StatusBarNotification;
 import android.support.design.widget.FloatingActionButton;
@@ -33,6 +31,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
+import com.idesign.okalarm.Factory.SystemAlarm;
 import com.idesign.okalarm.Fragments.ActiveAlarmsFragment;
 import com.idesign.okalarm.Fragments.AlarmFragment;
 import com.idesign.okalarm.Fragments.EmptyListFragment;
@@ -41,7 +40,7 @@ import com.idesign.okalarm.Factory.AlarmIntentFactory;
 import com.idesign.okalarm.Fragments.PuzzleFragment;
 import com.idesign.okalarm.Interfaces.ActiveAlarmsFragmentListener;
 import com.idesign.okalarm.ViewModels.ActiveAlarmsViewModel;
-import com.idesign.okalarm.ViewModels.RingtonesViewModel;
+import com.idesign.okalarm.ViewModels.SystemAlarmsViewModel;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -51,7 +50,7 @@ import java.util.List;
 import java.util.Locale;
 
 import io.reactivex.Observable;
-import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.schedulers.Schedulers;
 
@@ -74,13 +73,17 @@ ActiveAlarmsFragmentListener {
   private AlarmIntentFactory alarmIntentFactory;
 
   private ActiveAlarmsViewModel activeAlarmsViewModel;
-  private RingtonesViewModel ringtonesViewModel;
+
+  private SystemAlarmsViewModel systemAlarmsViewModel;
+
   private int mFragment_int = -1;
 
-  private List<Ringtone> systemRingtones;
-  private Disposable observable;
+  private List<SystemAlarm> mSystemAlarms;
 
-  private final CompositeDisposable compositeDisposable = new CompositeDisposable();
+  private Disposable observable;
+  private Cursor mCursor;
+
+  // private final CompositeDisposable compositeDisposable = new CompositeDisposable();
 
   public static final String EXTRA_FRAGMENT_INT = "extra.fragment.integer";
 
@@ -90,16 +93,19 @@ ActiveAlarmsFragmentListener {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
 
-    systemRingtones = new ArrayList<>();
+    mSystemAlarms = new ArrayList<>();
+    ringtoneManager = new RingtoneManager(MainActivity.this);
+    mCursor = ringtoneManager.getCursor();
 
     activeAlarmsViewModel = ViewModelProviders.of(this).get(ActiveAlarmsViewModel.class);
-    ringtonesViewModel = ViewModelProviders.of(this).get(RingtonesViewModel.class);
-    ringtonesViewModel.getRingtones().observe(this, items -> systemRingtones = items);
+
+    systemAlarmsViewModel = ViewModelProviders.of(this).get(SystemAlarmsViewModel.class);
+    systemAlarmsViewModel.getItems().observe(this, items -> mSystemAlarms = items);
+
     fab = findViewById(R.id.main_fab);
     fab.setOnClickListener(l -> setFragment());
 
     alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-    ringtoneManager = new RingtoneManager(MainActivity.this);
     alarmIntentFactory = new AlarmIntentFactory();
     Intent getIntent = getIntent();
 
@@ -135,7 +141,7 @@ ActiveAlarmsFragmentListener {
       final String itemUri = getIntent.getStringExtra(Constants.EXTRA_URI);
       final int volume = getIntent.getIntExtra(Constants.EXTRA_VOLUME, 0);
       final String result = message.equalsIgnoreCase(answer) ? "Correct!" : "Sorry, wrong day";
-      showToast(result);
+      toast(result);
       onActiveAlarm(notificationList, itemUri, volume);
 
     } else if (getIntent.getStringExtra(Constants.BOOT_TAG) == null && hasPendingNotifications) {
@@ -158,80 +164,27 @@ ActiveAlarmsFragmentListener {
     }
   }
 
-
-  final Handler mHandler = new Handler();
-
-  public void setRingtoneViewModel() {
-   new Thread(() -> {
-      mHandler.post(() -> {
-        final Cursor cursor = ringtoneManager.getCursor();
-        final List<Ringtone> ringtones = new ArrayList<>();
-        while (cursor.moveToNext()) {
-          ringtones.add(ringtoneManager.getRingtone(cursor.getPosition()));
-        }
-        ringtonesViewModel.setRingtones(ringtones);
-      });
-    }).start();
-
-    /* final Cursor cursor = ringtoneManager.getCursor();
-    final List<Ringtone> ringtones = new ArrayList<>();
-    while (cursor.moveToNext()) {
-      ringtones.add(ringtoneManager.getRingtone(cursor.getPosition()));
-    }
-    ringtonesViewModel.setRingtones(ringtones); */
-  }
-
-  public Observable<Ringtone> getObservable(final int position) {
-   return Observable.just(ringtoneManager.getRingtone(position));
-  }
-
-  void toast(String message) {
-    mHandler.post(() -> Toast.makeText(getBaseContext(), message, Toast.LENGTH_SHORT).show());
-  }
-
   public void observeToCursor() {
-    final Cursor cursor = ringtoneManager.getCursor();
-    final List<Ringtone> ringtones = new ArrayList<>();
-
+    final List<SystemAlarm> alarms = new ArrayList<>();
     /*=========================================================================*
      *  Working on background thread not throwing error on orientation change  *
      *=========================================================================*/
     if (observable == null || observable.isDisposed()) {
-      observable = Observable.just(cursor)
+      observable = Observable.just(mCursor)
       .observeOn(Schedulers.io())
       .map((c) -> {
+
         while (c.moveToNext()) {
-          ringtones.add(ringtoneManager.getRingtone(c.getPosition()));
+          final int pos = c.getPosition();
+          SystemAlarm systemAlarm = new SystemAlarm(ringtoneManager.getRingtone(pos).getTitle(getBaseContext()), ringtoneManager.getRingtoneUri(pos).toString());
+          alarms.add(systemAlarm);
         }
-        return ringtones;
+        return alarms;
       })
-      .subscribeOn(Schedulers.newThread())
-      .subscribe(result -> ringtonesViewModel.postRingtones(result),
-       e -> showToast("error: " + e.getMessage()),
+      .observeOn(AndroidSchedulers.mainThread())
+      .subscribe(result -> systemAlarmsViewModel.setSystemAlarms(alarms),
+       e -> toast("error: " + e.getMessage()),
       () -> Log.d("MAIN ACTIVITY", "SUBSCRIPTION IS COMPLETE"));
-
-
-      /* while (cursor.moveToNext()) {
-        compositeDisposable.add(getObservable(cursor.getPosition())
-        .subscribeOn(Schedulers.newThread())
-        .observeOn(AndroidSchedulers.mainThread())
-        .subscribe(ringtone -> ringtones.add(ringtone))); */
-
-
-      /* .subscribeWith(new DisposableObserver<Ringtone>() {
-        @Override
-        public void onComplete() {
-
-        }
-        @Override
-        public void onError(Throwable e) {
-          showToast("Error: " + e.getMessage());
-        }
-        @Override
-        public void onNext(Ringtone ringtone) {
-          ringtones.add(ringtone);
-        }
-      }));  */
     }
   }
 
@@ -350,9 +303,7 @@ ActiveAlarmsFragmentListener {
     if (addAlarmFragment != null && addAlarmFragment.isVisible()) {
       return;
     }
-    if (addAlarmFragment == null) {
-      addAlarmFragment = AlarmFragment.newInstance();
-    }
+    addAlarmFragment = AlarmFragment.newInstance();
     replaceFragment(addAlarmFragment);
   }
 
@@ -369,14 +320,14 @@ ActiveAlarmsFragmentListener {
    *  AlarmFragment Interface  *
    *===========================*/
   public void onSet(int hourOfDay, int minute, int volume, String am_pm, final int position) {
-    final Uri itemUri;
+    final String itemUri;
     final String _title;
     if (position == -1) {
-      itemUri = RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM);
+      itemUri = RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_ALARM).toString();
       _title = null;
     } else {
-      _title = systemRingtones.get(position).getTitle(this);
-      itemUri = ringtoneManager.getRingtoneUri(position);
+      _title = mSystemAlarms.get(position).get_title();
+      itemUri = mSystemAlarms.get(position).get_itemUri();
     }
 
     final ActiveAlarm activeAlarm = alarmIntentFactory.activeAlarm(hourOfDay, minute, volume, am_pm,  _title, itemUri);
@@ -512,7 +463,11 @@ ActiveAlarmsFragmentListener {
   @Override
   public void onDestroy() {
     super.onDestroy();
-    observable.dispose();
+    if (observable != null && !observable.isDisposed()) {
+      observable.dispose();
+    }
+    mCursor.close();
+    observable = null;
   }
 
   @Override
@@ -541,7 +496,9 @@ ActiveAlarmsFragmentListener {
     super.onBackPressed();
   }
 
-  public void showToast(CharSequence message) {
-    Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+  final Handler mHandler = new Handler();
+
+  void toast(String message) {
+    mHandler.post(() -> Toast.makeText(getBaseContext(), message, Toast.LENGTH_SHORT).show());
   }
 }
